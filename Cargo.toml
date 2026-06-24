@@ -1,7 +1,13 @@
 [package]
 name = "luatalk-cli"
 version = "0.1.0-alpha"
+authors = ["celet-ff-io"]
 edition = "2024"
+rust-version = "1.95"
+description = ""
+readme = "README.md"
+homepage = "https://github.com/celet-ff-io/luatalk-cli"
+repository = "https://github.com/celet-ff-io/luatalk-cli"
 
 [dependencies]
 anyhow = "1.0.102"

@@ -14,7 +14,7 @@ use log::debug;
 use mlua::{Lua, LuaSerdeExt, Table, Value};
 use tap::Pipe;
 
-/// Convert your Lua file to HTML.
+/// Convert your Lua file to something.
 /// Supports Lua 5.5.
 #[derive(Debug, Parser)]
 #[command(version)]
