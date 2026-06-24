@@ -7,7 +7,10 @@ edition = "2024"
 anyhow = "1.0.102"
 clap = { version = "4.6.1", features = ["derive"] }
 clap-stdin = "0.8.1"
+clap-verbosity-flag = "3.0.4"
 dioxus = { version = "0.7.9", features = ["ssr"] }
+env_logger = "0.11.10"
+log = "0.4.33"
 mlua = { version = "0.11.6", features = [
   "anyhow",
   "lua55",

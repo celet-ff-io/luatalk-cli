@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::io::{BufWriter, Write};
 
 use anyhow::{Context, Result};
 use clap::{
@@ -8,10 +8,15 @@ use clap::{
         styling::{AnsiColor, Effects},
     },
 };
-use clap_stdin::FileOrStdin;
+use clap_stdin::{FileOrStdin, FileOrStdout};
+use clap_verbosity_flag::{InfoLevel, Verbosity};
+use log::debug;
+use mlua::{Lua, LuaSerdeExt, Table, Value};
+use tap::Pipe;
 
 /// Convert your Lua file to HTML.
-#[derive(Parser, Debug)]
+/// Supports Lua 5.5.
+#[derive(Debug, Parser)]
 #[command(version)]
 #[command(styles = Styles::styled()
     .header(AnsiColor::Yellow.on_default().effects(Effects::BOLD))
@@ -20,18 +25,45 @@ use clap_stdin::FileOrStdin;
     .placeholder(AnsiColor::Red.on_default())
 )]
 struct Args {
-    /// Input Lua file. Lua 5.5 supported.
+    /// Input Lua file. '-' for stdin.
     input: FileOrStdin,
 
-    #[arg(short, long, default_value = "index.html")]
-    output: PathBuf,
+    /// Ouptut file. '-' for stdout. Defaults to stdout.
+    #[arg(short, long, default_value = "-")]
+    output: FileOrStdout,
+
+    #[command(flatten)]
+    verbose: Verbosity<InfoLevel>,
 }
 
 fn main() -> Result<()> {
-    let args = Args::parse();
+    let source;
+    let mut writer;
+    {
+        let args = Args::parse();
+        env_logger::Builder::new()
+            .filter_level(args.verbose.log_level_filter())
+            .init();
+        let input = args.input;
+        debug!("Input file: {}", input.filename());
+        source = input.contents().context("Input file not found")?;
+        let output = args.output;
+        debug!("Output file: {}", output.filename());
+        writer = output.into_writer()?.pipe(BufWriter::new);
+    };
 
-    let input = args.input.contents().context("Input file not found")?;
+    let lua = Lua::new();
 
-    println!("Input: {input}");
+    let talk: Vec<String> = lua
+        .load(&source)
+        .eval::<Table>()
+        .context("Failed to evaluate Lua code")?
+        .pipe(Value::Table)
+        .pipe(|v| lua.from_value(v))
+        .context("Failed to deserialize Lua code")?;
+
+    debug!("Build talk success");
+
+    writeln!(writer, "{talk:?}")?;
     Ok(())
 }
