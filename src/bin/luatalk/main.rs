@@ -65,5 +65,8 @@ fn main() -> Result<()> {
     debug!("Build talk success");
 
     writeln!(writer, "{talk:?}")?;
+
+    writer.flush()?;
+
     Ok(())
 }
