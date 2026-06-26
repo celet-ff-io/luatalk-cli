@@ -1,7 +1,7 @@
 //! This file is according to `talk.lua` as following.
 #![doc = concat!(
     "```lua\n",
-    include_str!("../../assets/talk.lua"),
+    include_str!("../../assets/lua/lib/talk.lua"),
     "```\n"
 )]
 

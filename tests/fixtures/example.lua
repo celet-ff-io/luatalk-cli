@@ -1,1 +1,1 @@
-../../examples/input/example.lua
+../../assets/lua/input/example.lua
