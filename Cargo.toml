@@ -14,8 +14,8 @@ anyhow = "1.0.102"
 clap = { version = "4.6.1", features = ["derive"] }
 clap-stdin = "0.8.1"
 clap-verbosity-flag = "3.0.4"
-dioxus = { version = "0.7.9", features = ["ssr"] }
 env_logger = "0.11.10"
+getset = "0.1.7"
 log = "0.4.33"
 mlua = { version = "0.11.6", features = [
   "anyhow",
@@ -23,6 +23,14 @@ mlua = { version = "0.11.6", features = [
   "serde",
   "vendored",
 ] }
-serde = "1.0.228"
+serde = { version = "1.0.228", features = ["derive"] }
 tap = "1.0.1"
-thiserr = "0.1.0"
+thiserror = "2.0.18"
+typed-builder = "0.23.2"
+
+[[bin]]
+name = "luatalk"
+path = "src/bin/luatalk/main.rs"
+
+[lib]
+name = "luatalk"
