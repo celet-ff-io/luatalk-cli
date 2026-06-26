@@ -11,8 +11,10 @@ use clap::{
 use clap_stdin::{FileOrStdin, FileOrStdout};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use log::debug;
-use mlua::{Lua, LuaSerdeExt, Table, Value};
+use mlua::Lua;
 use tap::Pipe;
+
+use luatalk::{Article, lua};
 
 /// Convert your Lua file to something.
 /// Supports Lua 5.5.
@@ -54,17 +56,10 @@ fn main() -> Result<()> {
 
     let lua = Lua::new();
 
-    let talk: Vec<String> = lua
-        .load(&source)
-        .eval::<Table>()
-        .context("Failed to evaluate Lua code")?
-        .pipe(Value::Table)
-        .pipe(|v| lua.from_value(v))
-        .context("Failed to deserialize Lua code")?;
+    let article = lua::Article::from_chunk(source, &lua)?.pipe(Article::from);
+    debug!("Build article success");
 
-    debug!("Build talk success");
-
-    writeln!(writer, "{talk:?}")?;
+    writeln!(writer, "{article:?}")?;
 
     writer.flush()?;
 
