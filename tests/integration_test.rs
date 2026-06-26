@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
 use luatalk::{Article, Body, ImageValue, Msg, Page, Profile, Role, TextValue, lua};
+use miette::{IntoDiagnostic, Result, WrapErr};
 use mlua::Lua;
 use pretty_assertions::assert_eq;
 use tap::Pipe;
@@ -13,7 +13,8 @@ fn from_chunk() -> Result<()> {
         let chunk = include_str!("fixtures/raw_example.lua");
 
         lua::Article::from_chunk(chunk, &lua)
-            .context("Failed to parse Lua chunk")?
+            .into_diagnostic()
+            .wrap_err("Failed to parse Lua chunk")?
             .pipe(Article::from)
     };
     let expected = {

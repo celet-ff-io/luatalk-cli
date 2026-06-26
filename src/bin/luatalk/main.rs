@@ -1,6 +1,5 @@
 use std::io::{BufWriter, Write};
 
-use anyhow::{Context, Result};
 use clap::{
     Parser,
     builder::{
@@ -11,6 +10,7 @@ use clap::{
 use clap_stdin::{FileOrStdin, FileOrStdout};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use log::debug;
+use miette::{IntoDiagnostic, Result, WrapErr};
 use mlua::Lua;
 use tap::Pipe;
 
@@ -46,22 +46,30 @@ fn main() -> Result<()> {
         env_logger::Builder::new()
             .filter_level(args.verbose.log_level_filter())
             .init();
+
         let input = args.input;
         debug!("Input file: {}", input.filename());
-        source = input.contents().context("Input file not found")?;
+
+        source = input
+            .contents()
+            .into_diagnostic()
+            .wrap_err("Input file not found")?;
         let output = args.output;
         debug!("Output file: {}", output.filename());
-        writer = output.into_writer()?.pipe(BufWriter::new);
+
+        writer = output.into_writer().into_diagnostic()?.pipe(BufWriter::new);
     };
 
     let lua = Lua::new();
 
-    let article = lua::Article::from_chunk(source, &lua)?.pipe(Article::from);
+    let article = lua::Article::from_chunk(source, &lua)
+        .into_diagnostic()?
+        .pipe(Article::from);
     debug!("Build article success");
 
-    writeln!(writer, "{article:#?}")?;
+    writeln!(writer, "{article:#?}").into_diagnostic()?;
 
-    writer.flush()?;
+    writer.flush().into_diagnostic()?;
 
     Ok(())
 }
