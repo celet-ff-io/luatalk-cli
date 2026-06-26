@@ -59,7 +59,7 @@ fn main() -> Result<()> {
     let article = lua::Article::from_chunk(source, &lua)?.pipe(Article::from);
     debug!("Build article success");
 
-    writeln!(writer, "{article:?}")?;
+    writeln!(writer, "{article:#?}")?;
 
     writer.flush()?;
 
