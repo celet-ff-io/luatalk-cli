@@ -3,6 +3,7 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use luatalk::{Article, Body, ImageValue, Msg, Page, Profile, Role, TextValue, lua};
 use mlua::Lua;
+use pretty_assertions::assert_eq;
 use tap::Pipe;
 
 #[test]
