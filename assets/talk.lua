@@ -44,7 +44,7 @@ end
 --- @param obj any
 --- @return boolean
 local function is_image(obj)
-	return type(obj) == "table" and type(obj.content) == "string"
+	return type(obj) == "table" and type(obj.url) == "string"
 end
 
 --- @param obj any
@@ -57,6 +57,15 @@ end
 --- @return boolean
 local function is_body(obj)
 	return type(obj) == "table" and type(obj.type) == "string" and type(obj.value) == "table"
+end
+
+--- @param obj any
+--- @return boolean
+local function is_msg(obj)
+	return type(obj) == "table"
+		and type(obj.role) == "string"
+		and is_body(obj.body)
+		and (obj.profile == nil or is_profile(obj.profile))
 end
 
 -- Constants
@@ -76,20 +85,31 @@ talk.Type = {
 
 -- Functions
 
+--- Create a page.
+--- Checks only the first entry of list for quick content validation.
+--- @param msgs Msg[]
+--- @return Page
+function talk.page(msgs)
+	assert(type(msgs) == "table", "Msg list must be a table")
+	assert(#msgs > 0, "Msg list must not be empty")
+	assert(is_msg(msgs[1]), "First msg of list is invalid. Please check your msg list")
+	return { msgs = msgs }
+end
+
 --- Create a message with role, body, and optional profile.
 --- @param role string
 --- @param body Body | string Body or Text content
 --- @param profile Profile?
 --- @return Msg
 local function role_msg(role, body, profile)
-	assert(type(role) == "string", "Invaild role")
+	assert(type(role) == "string", "Invaild msg role")
 	if type(body) == "string" then
 		body = talk.body_text({ content = body })
 	else
-		assert(is_body(body), "Invaild body")
+		assert(is_body(body), "Invaild msg body")
 	end
 	if profile then
-		assert(is_profile(profile)("Invaild profile"))
+		assert(is_profile(profile), "Invaild msg profile")
 	end
 	return { role = role, body = body, profile = profile }
 end
@@ -137,7 +157,7 @@ function talk.body_text(value)
 	if type(value) == "string" then
 		value = { content = value }
 	else
-		assert(is_text(value), "Invailed text body value")
+		assert(is_text(value), "Invaild body value as text")
 	end
 	return { type = talk.Type.Text, value = value }
 end
@@ -146,7 +166,7 @@ end
 --- @param value Image
 --- @return Body
 function talk.body_image(value)
-	assert(is_image(value), "Invailed image body value")
+	assert(is_image(value), "Invaild body value as image")
 	return { type = talk.Type.Image, value = value }
 end
 
