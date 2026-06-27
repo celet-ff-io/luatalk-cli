@@ -33,7 +33,7 @@ pub(crate) struct App {
     // #[arg(long = "lib", action = ArgAction::Append)]
     // libs: Vec<PathBuf>,
 
-    // Load the module `talk.lua`.
+    // Load the module `talk.lua` hard-coded in program.
     #[arg(long)]
     lib_default: bool,
 
