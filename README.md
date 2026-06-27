@@ -2,6 +2,10 @@
 
 Build article from Lua file.
 
+## TODO
+
+- Convert the article in pictures.
+
 ## Usage
 
 Use `luatalk help` and `luatalk help <COMMAND>` for more information.
@@ -41,6 +45,11 @@ which directly returns the full `Article` table.
 ```bash
 lua show raw_example.lua
 ```
+
+## Project goals
+
+- Provide a simple CLI tool to build article from Lua file.
+- Output the processed article in different formats.
 
 ## License
 
