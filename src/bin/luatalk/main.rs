@@ -3,8 +3,8 @@ mod app;
 use clap::Parser;
 use miette::Result;
 
-use crate::app::App;
+use crate::app::{App, Args};
 
 fn main() -> Result<()> {
-    App::parse().run()
+    App::run(Args::parse())
 }

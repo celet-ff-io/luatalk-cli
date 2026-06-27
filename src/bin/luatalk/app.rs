@@ -26,7 +26,7 @@ use luatalk::{Article, LuaTalkExt, lua};
     .literal(AnsiColor::Green.on_default().effects(Effects::BOLD))
     .placeholder(AnsiColor::Red.on_default())
 )]
-pub(crate) struct App {
+pub struct Args {
     /// Input Lua file. '-' for stdin.
     input: FileOrStdin,
 
@@ -45,20 +45,22 @@ pub(crate) struct App {
     verbose: Verbosity<InfoLevel>,
 }
 
+pub struct App;
+
 impl App {
-    pub(crate) fn run(self) -> Result<()> {
+    pub fn run(args: Args) -> Result<()> {
         let source;
         // let lib: Vec<PathBuf>;
         let mut writer;
         {
-            let input = self.input;
+            let input = args.input;
             debug!("Input file: {}", input.filename());
 
             source = input
                 .contents()
                 .into_diagnostic()
                 .wrap_err("Input file not found")?;
-            let output = self.output;
+            let output = args.output;
             debug!("Output file: {}", output.filename());
 
             writer = output.into_writer().into_diagnostic()?.pipe(BufWriter::new);
@@ -66,7 +68,7 @@ impl App {
 
         let lua = Lua::new();
 
-        if self.lib_default {
+        if args.lib_default {
             debug!("Loading default lib");
             lua.load_default_lib().into_diagnostic()?;
         }
