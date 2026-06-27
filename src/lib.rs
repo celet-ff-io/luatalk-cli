@@ -110,8 +110,8 @@ mod talk;
 
 pub use error::LuaParseError;
 
-pub use model::lua;
 pub use model::{Article, Body, Msg, Page, Profile};
 pub use model::{ImageValue, Role, TextValue};
+pub use model::{lua, momotalk};
 
 pub use talk::{LuaTalkExt, LuaTalkLibError};

@@ -1,4 +1,5 @@
 pub mod lua;
+pub mod momotalk;
 
 use std::sync::Arc;
 
