@@ -45,13 +45,20 @@ pub struct Args {
     verbose: Verbosity<InfoLevel>,
 }
 
-pub struct App;
+pub struct App {
+    source: String,
+    lib_default: bool,
+    writer: BufWriter<Box<dyn Write>>,
+
+    lua: Lua,
+}
 
 impl App {
-    pub fn run(args: Args) -> Result<()> {
+    pub fn new(args: Args) -> Result<Self> {
         let source;
         // let lib: Vec<PathBuf>;
-        let mut writer;
+        let lib_default = args.lib_default;
+        let writer;
         {
             let input = args.input;
             debug!("Input file: {}", input.filename());
@@ -61,22 +68,39 @@ impl App {
                 .into_diagnostic()
                 .wrap_err("Input file not found")?;
             let output = args.output;
-            debug!("Output file: {}", output.filename());
 
-            writer = output.into_writer().into_diagnostic()?.pipe(BufWriter::new);
+            debug!("Output file: {}", output.filename());
+            writer = output
+                .into_writer()
+                .into_diagnostic()?
+                .pipe(Box::new)
+                .pipe(|w| w as Box<dyn Write>)
+                .pipe(BufWriter::new);
         };
 
-        let lua = Lua::new();
+        Ok(Self {
+            source,
+            lib_default,
+            writer,
 
-        if args.lib_default {
+            lua: Lua::new(),
+        })
+    }
+
+    pub fn run(self) -> Result<()> {
+        let lua = self.lua;
+
+        if self.lib_default {
             debug!("Loading default lib");
             lua.load_default_lib().into_diagnostic()?;
         }
 
-        let article = lua::Article::from_chunk(&source, &lua)
+        let article = lua::Article::from_chunk(&self.source, &lua)
             .into_diagnostic()?
             .pipe(Article::from);
         debug!("Build article success");
+
+        let mut writer = self.writer;
 
         writeln!(writer, "{article:#?}").into_diagnostic()?;
 

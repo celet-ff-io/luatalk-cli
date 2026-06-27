@@ -6,5 +6,5 @@ use miette::Result;
 use crate::app::{App, Args};
 
 fn main() -> Result<()> {
-    App::run(Args::parse())
+    App::new(Args::parse())?.run()
 }
