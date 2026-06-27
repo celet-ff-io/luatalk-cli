@@ -46,7 +46,7 @@ pub struct CliLuaInputArgs {
     /// Input Lua file. '-' for stdin.
     pub input: FileOrStdin,
 
-    // Load the module `talk.lua` hard-coded in program.
+    /// Set this flag to load the default `talk.lua` module hard-coded in program.
     #[arg(long)]
     pub lib_default: bool,
 
