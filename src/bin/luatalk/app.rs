@@ -16,7 +16,7 @@ use tap::Pipe;
 
 use luatalk::{Article, LuaTalkExt, lua};
 
-/// Convert your Lua file to something.
+/// Convert your Lua file to `luatalk::Article` structure string.
 /// Supports Lua 5.5.
 #[derive(Debug, Parser)]
 #[command(version)]
@@ -75,7 +75,6 @@ impl App {
             .into_diagnostic()?
             .pipe(Article::from);
         debug!("Build article success");
-        println!("{source}");
 
         writeln!(writer, "{article:#?}").into_diagnostic()?;
 
