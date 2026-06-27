@@ -41,3 +41,12 @@ which directly returns the full `Article` table.
 ```bash
 lua show raw_example.lua
 ```
+
+## License
+
+Copyright (c) 2026-present [celet-ff-io](https://github.com/celet-ff-io)
+
+`luatalk-cli` is made available under the terms of
+either the MIT License or the Apache License 2.0, at your option.
+
+See the LICENSE-APACHE and LICENSE-MIT files for license details.

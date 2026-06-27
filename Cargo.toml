@@ -8,6 +8,7 @@ description = "Build article from Lua file."
 readme = "README.md"
 homepage = "https://github.com/celet-ff-io/luatalk-cli"
 repository = "https://github.com/celet-ff-io/luatalk-cli"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 clap = { version = "4.6.1", features = ["derive"] }
