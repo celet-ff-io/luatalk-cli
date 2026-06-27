@@ -1,22 +1,33 @@
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
-use luatalk::{Article, Body, ImageValue, Msg, Page, Profile, Role, TextValue, lua};
+use luatalk::{Article, Body, ImageValue, LuaTalkExt, Msg, Page, Profile, Role, TextValue, lua};
 use miette::{IntoDiagnostic, Result, WrapErr};
 use mlua::Lua;
 use pretty_assertions::assert_eq;
 use tap::Pipe;
 
-#[test]
-fn from_chunk() -> Result<()> {
-    let got = {
-        let lua = Lua::new();
-        let chunk = include_str!("fixtures/raw_example.lua");
+static EXAMPLE_ARTICALE_RESULT: OnceLock<Result<Article>> = OnceLock::new();
 
-        lua::Article::from_chunk(chunk, &lua)
-            .into_diagnostic()
-            .wrap_err("Failed to parse Lua chunk")?
-            .pipe(Article::from)
-    };
+fn try_get_example_article() -> Result<&'static Article> {
+    EXAMPLE_ARTICALE_RESULT
+        .get_or_init(|| {
+            let lua =
+                Lua::new().pipe(|lua| lua.load_default_lib().into_diagnostic().map(|_| lua))?;
+            let chunk = include_str!("fixtures/example.lua");
+
+            lua::Article::from_chunk(chunk, &lua)
+                .into_diagnostic()
+                .wrap_err("Failed to parse Lua chunk")?
+                .pipe(Article::from)
+                .pipe(Ok)
+        })
+        .as_ref()
+        .map_err(|e| miette::miette!("{e}"))
+}
+
+#[test]
+fn check_article() -> Result<()> {
+    let got = try_get_example_article()?;
     let expected = {
         let her = Profile::builder()
             .name("Her".to_owned())
@@ -99,7 +110,26 @@ fn from_chunk() -> Result<()> {
             .build()
     };
 
-    assert_eq!(got, expected);
+    assert_eq!(got, &expected);
+
+    Ok(())
+}
+
+#[test]
+fn check_article_raw() -> Result<()> {
+    let example = try_get_example_article()?;
+    let raw_example = {
+        let lua = Lua::new();
+        let chunk = include_str!("fixtures/raw_example.lua");
+
+        lua::Article::from_chunk(chunk, &lua)
+            .into_diagnostic()
+            .wrap_err("Failed to parse Lua chunk")
+            .unwrap()
+            .pipe(Article::from)
+    };
+
+    assert_eq!(example, &raw_example);
 
     Ok(())
 }

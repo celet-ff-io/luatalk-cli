@@ -11,7 +11,7 @@ use mlua::{AsChunk, FromLua, Lua, LuaSerdeExt, Table, Value};
 use serde::{Deserialize, Serialize};
 use tap::Pipe;
 
-use crate::model;
+use crate::{error::LuaParseError, model};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Article {
@@ -27,15 +27,6 @@ impl Article {
             .pipe(|v| Article::from_lua(v, lua))
             .map_err(LuaParseError::Deserialize)
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum LuaParseError {
-    #[error("Failed to evaluate Lua code: {0}")]
-    Eval(#[source] mlua::Error),
-
-    #[error("Failed to deserialize Lua code: {0}")]
-    Deserialize(#[source] mlua::Error),
 }
 
 impl FromLua for Article {

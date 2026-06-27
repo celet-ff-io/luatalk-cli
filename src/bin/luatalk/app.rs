@@ -9,16 +9,12 @@ use clap::{
 };
 use clap_stdin::{FileOrStdin, FileOrStdout};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
-use const_format::formatcp;
 use log::debug;
 use miette::{IntoDiagnostic, Result, WrapErr};
-use mlua::{
-    Lua,
-    prelude::{LuaTable, LuaValue},
-};
+use mlua::Lua;
 use tap::Pipe;
 
-use luatalk::{Article, lua};
+use luatalk::{Article, LuaTalkExt, lua};
 
 /// Convert your Lua file to something.
 /// Supports Lua 5.5.
@@ -71,24 +67,8 @@ impl App {
         let lua = Lua::new();
 
         if self.lib_default {
-            debug!("Loading default libs");
-
-            let loaded_modules: LuaTable = lua.load("package.loaded").eval().into_diagnostic()?;
-
-            const LUA_MODULE_NAME: &str = "talk";
-            let lib_module: LuaValue = lua
-                .load(include_str!("../../../assets/lua/lib/talk.lua"))
-                .set_name(formatcp!("{LUA_MODULE_NAME}.lua"))
-                .eval()
-                .into_diagnostic()
-                .wrap_err("Failed to load `talk.lua` content")?;
-
-            debug!("Loaded module `{LUA_MODULE_NAME}`: {lib_module:?}");
-
-            loaded_modules
-                .set(LUA_MODULE_NAME, lib_module)
-                .into_diagnostic()
-                .wrap_err("Failed to load `talk.lua` as module")?;
+            debug!("Loading default lib");
+            lua.load_default_lib().into_diagnostic()?;
         }
 
         let article = lua::Article::from_chunk(&source, &lua)
