@@ -7,6 +7,7 @@
 use std::num::TryFromIntError;
 
 use serde::Serialize;
+use serde_repr::Serialize_repr;
 use tap::Pipe;
 
 use crate::model::{
@@ -169,7 +170,8 @@ pub struct TalkHistoryItem {
     pub content: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize_repr)]
+#[repr(i32)]
 pub enum Type {
     Student = 0,
     Sensei = 1,
