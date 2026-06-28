@@ -1,10 +1,12 @@
 use std::{
     cell::RefCell,
     io::{self, Write},
-    path::Path,
+    path::{Path, PathBuf},
     rc::Rc,
+    str::FromStr,
 };
 
+use clap_stdin::FileOrStdout;
 use log::{debug, warn};
 use miette::{IntoDiagnostic, Result, WrapErr, diagnostic};
 use mlua::{Lua, Table};
@@ -36,14 +38,13 @@ pub struct App<S: State> {
 enum Action {
     Show {
         lua_input: LuaInput,
-        writer: RefCell<Box<dyn Write>>,
+        output_dest: FileOrStdout,
     },
 
     Export {
         lua_input: LuaInput,
         format: OutputFormat,
-        concat_pages: bool,
-        writer: RefCell<Box<dyn Write>>,
+        output_dest: MultiPurposeWriter,
     },
 }
 
@@ -106,6 +107,11 @@ enum OutputFormat {
     Momotalk,
 }
 
+enum MultiPurposeWriter {
+    Single(FileOrStdout),
+    Multi(PathBuf),
+}
+
 impl<S: State> App<S> {
     fn as_lua_path_entry_or_empty(dir: &Path, file: &str) -> String {
         dir.join(file)
@@ -125,17 +131,10 @@ impl TryFrom<Args> for App<state::Initial> {
             .init();
 
         let action = match args.command {
-            Commands::Show { lua_input_args } => {
-                let lua_input = lua_input_args.into();
-                let writer = io::stdout();
-                Action::Show {
-                    lua_input,
-                    writer: writer
-                        .pipe(Box::new)
-                        .pipe(|w| w as Box<dyn Write>)
-                        .pipe(RefCell::new),
-                }
-            }
+            Commands::Show { lua_input_args } => Action::Show {
+                lua_input: lua_input_args.into(),
+                output_dest: FileOrStdout::from_str("-").into_diagnostic()?,
+            },
 
             Commands::Export {
                 lua_input_args,
@@ -147,20 +146,25 @@ impl TryFrom<Args> for App<state::Initial> {
                 let format = match format {
                     OutputFormatArg::Momotalk => OutputFormat::Momotalk,
                 };
-                let writer = {
+                let output_dest = if concat_pages {
                     debug!("Output file: {}", output.filename());
+                    output.pipe(MultiPurposeWriter::Single)
+                } else {
+                    if output.is_stdout() {
+                        return Err(diagnostic!(
+                            "Output file cannot be stdout to export article in pages."
+                        )
+                        .into());
+                    }
                     output
-                        .into_writer()
-                        .into_diagnostic()?
-                        .pipe(Box::new)
-                        .pipe(|w| w as Box<dyn Write>)
-                        .pipe(RefCell::new)
+                        .filename()
+                        .pipe(PathBuf::from)
+                        .pipe(MultiPurposeWriter::Multi)
                 };
                 Action::Export {
                     lua_input,
                     format,
-                    concat_pages,
-                    writer,
+                    output_dest,
                 }
             }
         }
@@ -221,53 +225,51 @@ impl App<state::Initial> {
 impl Runnable for App<state::OfArticle> {
     fn run(self) -> Result<()> {
         match self.action.as_ref() {
-            Action::Show { writer, .. } => {
-                let mut writer = writer.borrow_mut();
+            Action::Show { output_dest, .. } => {
+                let mut writer = output_dest.clone().into_writer().into_diagnostic()?;
                 writeln!(writer, "{:#?}", self.state.article).into_diagnostic()?;
                 writer.flush().into_diagnostic()
             }
 
             Action::Export {
                 format,
-                concat_pages,
-                writer,
+                output_dest,
                 ..
             } => {
                 if format != &OutputFormat::Momotalk {
                     return Err(diagnostic!("Only Momotalk format is supported").into());
                 }
-                if !concat_pages {
-                    return Err(diagnostic!(
-                        "Currently only concatenated single page export is supported. Use flag --concat-pages."
-                    )
-                    .into());
+                match output_dest {
+                    MultiPurposeWriter::Single(output_dest) => {
+                        let talk_history = self
+                            .state
+                            .article
+                            .into_pages()
+                            .into_iter()
+                            .flatten()
+                            .collect::<Vec<Msg>>()
+                            .into_with_lang(Lang::En)
+                            .try_into()
+                            .into_diagnostic()?;
+                        let momotalk_export = momotalk::MomotalkExport {
+                            talk_id: 1,
+                            talk_history,
+                            select_list: Vec::new(),
+                        };
+                        debug!("Build MomotalkExport structure success");
+
+                        let mut writer = output_dest.clone().into_writer().into_diagnostic()?;
+                        serde_json::to_writer_pretty(&mut writer, &momotalk_export)
+                            .into_diagnostic()?;
+
+                        writer.write_all(b"\n").into_diagnostic()?;
+                        writer.flush().into_diagnostic()
+                    }
+
+                    MultiPurposeWriter::Multi(_) => {
+                        todo!()
+                    }
                 }
-                let mut writer = writer.borrow_mut();
-
-                let talk_history = self
-                    .state
-                    .article
-                    .into_pages()
-                    .into_iter()
-                    .flatten()
-                    .collect::<Vec<Msg>>()
-                    .into_with_lang(Lang::En)
-                    .try_into()
-                    .into_diagnostic()?;
-
-                let momotalk_export = momotalk::MomotalkExport {
-                    talk_id: 1,
-                    talk_history,
-                    select_list: Vec::new(),
-                };
-
-                debug!("Build MomotalkExport structure success");
-
-                serde_json::to_writer_pretty(writer.as_mut(), &momotalk_export)
-                    .into_diagnostic()?;
-
-                writer.write_all(b"\n").into_diagnostic()?;
-                writer.flush().into_diagnostic()
             }
         }
     }
