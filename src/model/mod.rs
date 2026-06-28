@@ -13,10 +13,25 @@ pub struct Article {
     pub(crate) pages: Vec<Page>,
 }
 
+impl Article {
+    pub fn into_pages(self) -> Vec<Page> {
+        self.pages
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Getters, TypedBuilder)]
 pub struct Page {
     #[getset(get = "pub")]
     pub(crate) msgs: Vec<Msg>,
+}
+
+impl IntoIterator for Page {
+    type Item = Msg;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.msgs.into_iter()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Getters, TypedBuilder)]
