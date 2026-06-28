@@ -11,14 +11,14 @@ use mlua::{Lua, Table};
 use tap::{Pipe, Tap};
 
 use luatalk::{
-    Article, LuaTalkExt,
+    Article, LuaTalkExt, Msg,
     lang::{IntoWithLang, Lang},
     lua, momotalk,
 };
 
 use crate::{
     app::state::State,
-    cli::{Args, Commands, LuaInputArgs},
+    cli::{Args, Commands, LuaInputArgs, OutputFormatArg},
 };
 
 pub trait Runnable {
@@ -41,6 +41,8 @@ enum Action {
 
     Export {
         lua_input: LuaInput,
+        format: OutputFormat,
+        concat_pages: bool,
         writer: RefCell<Box<dyn Write>>,
     },
 }
@@ -99,6 +101,11 @@ impl From<LuaInputArgs> for LuaInput {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum OutputFormat {
+    Momotalk,
+}
+
 impl<S: State> App<S> {
     fn as_lua_path_entry_or_empty(dir: &Path, file: &str) -> String {
         dir.join(file)
@@ -133,8 +140,13 @@ impl TryFrom<Args> for App<state::Initial> {
             Commands::Export {
                 lua_input_args,
                 output,
+                format,
+                concat_pages,
             } => {
                 let lua_input = lua_input_args.into();
+                let format = match format {
+                    OutputFormatArg::Momotalk => OutputFormat::Momotalk,
+                };
                 let writer = {
                     debug!("Output file: {}", output.filename());
                     output
@@ -144,7 +156,12 @@ impl TryFrom<Args> for App<state::Initial> {
                         .pipe(|w| w as Box<dyn Write>)
                         .pipe(RefCell::new)
                 };
-                Action::Export { lua_input, writer }
+                Action::Export {
+                    lua_input,
+                    format,
+                    concat_pages,
+                    writer,
+                }
             }
         }
         .pipe(Rc::new);
@@ -190,12 +207,14 @@ impl App<state::Initial> {
         let article = lua::Article::from_chunk(source, lua)
             .into_diagnostic()?
             .pipe(Article::from);
+
         debug!("Build article success");
 
-        Ok(App {
+        App {
             state: state::OfArticle { article },
             action: self.action,
-        })
+        }
+        .pipe(Ok)
     }
 }
 
@@ -208,17 +227,30 @@ impl Runnable for App<state::OfArticle> {
                 writer.flush().into_diagnostic()
             }
 
-            Action::Export { writer, .. } => {
+            Action::Export {
+                format,
+                concat_pages,
+                writer,
+                ..
+            } => {
+                if format != &OutputFormat::Momotalk {
+                    return Err(diagnostic!("Only Momotalk format is supported").into());
+                }
+                if !concat_pages {
+                    return Err(diagnostic!(
+                        "Currently only concatenated single page export is supported. Use flag --concat-pages."
+                    )
+                    .into());
+                }
                 let mut writer = writer.borrow_mut();
 
                 let talk_history = self
                     .state
                     .article
-                    .pages()
-                    .first()
-                    .ok_or_else(|| diagnostic!("Article has no pages"))?
-                    .msgs()
-                    .clone()
+                    .into_pages()
+                    .into_iter()
+                    .flatten()
+                    .collect::<Vec<Msg>>()
                     .into_with_lang(Lang::En)
                     .try_into()
                     .into_diagnostic()?;
@@ -228,6 +260,8 @@ impl Runnable for App<state::OfArticle> {
                     talk_history,
                     select_list: Vec::new(),
                 };
+
+                debug!("Build MomotalkExport structure success");
 
                 serde_json::to_writer_pretty(writer.as_mut(), &momotalk_export)
                     .into_diagnostic()?;

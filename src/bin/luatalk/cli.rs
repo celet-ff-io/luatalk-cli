@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{
-    ArgAction, Parser, Subcommand,
+    ArgAction, Parser, Subcommand, ValueEnum,
     builder::{
         Styles,
         styling::{AnsiColor, Effects},
@@ -42,7 +42,15 @@ pub enum Commands {
         #[command(flatten)]
         lua_input_args: LuaInputArgs,
 
-        /// Ouptut file. '-' for stdout. Defaults to stdout.
+        /// Output format.
+        #[arg(short, long)]
+        format: OutputFormatArg,
+
+        /// Concatenate all pages into a single page
+        #[arg(long, default_value_t = false)]
+        concat_pages: bool,
+
+        /// Ouptut file. '-' for stdout.
         #[arg(short, long, default_value = "-")]
         output: FileOrStdout,
     },
@@ -60,4 +68,10 @@ pub struct LuaInputArgs {
     /// Additional search directories for Lua modules. Can be specified multiple times.
     #[arg(long = "lib", action = ArgAction::Append)]
     pub libs: Vec<PathBuf>,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+#[value(rename_all = "kebab-case")]
+pub enum OutputFormatArg {
+    Momotalk,
 }
