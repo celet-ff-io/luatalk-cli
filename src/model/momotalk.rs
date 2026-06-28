@@ -1,4 +1,8 @@
-//! This file is according to the export JSON file of [MomoTalk Editor](https://github.com/U1805/momotalk/)
+//! This file is according to the export JSON file of [MomoTalk Editor](https://github.com/U1805/momotalk/).
+//!
+//! [MomoTalk Editor](https://github.com/U1805/momotalk/) is
+//! a web chat generator, style from Blue Archive,
+//! made by [U1805 (Dai0v0)](https://github.com/U1805).
 
 use std::num::TryFromIntError;
 

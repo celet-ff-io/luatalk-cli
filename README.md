@@ -51,6 +51,11 @@ lua show raw_example.lua
 - Provide a simple CLI tool to build article from Lua file.
 - Output the processed article in different formats.
 
+## Related projects
+
+- [MomoTalk Editor](https://github.com/U1805/momotalk/) -
+  Blue Archive Momotalk Editor
+
 ## License
 
 Copyright (c) 2026-present [celet-ff-io](https://github.com/celet-ff-io)
