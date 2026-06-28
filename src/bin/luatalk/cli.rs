@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{
-    ArgAction, Args, Parser, Subcommand,
+    ArgAction, Parser, Subcommand,
     builder::{
         Styles,
         styling::{AnsiColor, Effects},
@@ -20,20 +20,20 @@ use clap_verbosity_flag::{InfoLevel, Verbosity};
     .literal(AnsiColor::Green.on_default().effects(Effects::BOLD))
     .placeholder(AnsiColor::Red.on_default())
 )]
-pub struct CliArgs {
+pub struct Args {
     #[command(flatten)]
     pub verbose: Verbosity<InfoLevel>,
 
     #[command(subcommand)]
-    pub command: CliCommands,
+    pub command: Commands,
 }
 
 #[derive(Debug, Subcommand)]
-pub enum CliCommands {
+pub enum Commands {
     /// Show Lua file in `luatalk::Article` structure string.
     Show {
         #[command(flatten)]
-        lua_input_args: CliLuaInputArgs,
+        lua_input_args: LuaInputArgs,
 
         /// Ouptut file. '-' for stdout. Defaults to stdout.
         #[arg(short, long, default_value = "-")]
@@ -41,8 +41,8 @@ pub enum CliCommands {
     },
 }
 
-#[derive(Debug, Args)]
-pub struct CliLuaInputArgs {
+#[derive(Debug, clap::Args)]
+pub struct LuaInputArgs {
     /// Input Lua file. '-' for stdin.
     pub input: FileOrStdin,
 
