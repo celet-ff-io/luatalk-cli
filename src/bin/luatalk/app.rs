@@ -1,16 +1,20 @@
 use std::{
     cell::RefCell,
-    io::{BufWriter, Write},
+    io::{self, Write},
     path::Path,
     rc::Rc,
 };
 
 use log::{debug, warn};
-use miette::{IntoDiagnostic, Result, WrapErr};
+use miette::{IntoDiagnostic, Result, WrapErr, diagnostic};
 use mlua::{Lua, Table};
 use tap::{Pipe, Tap};
 
-use luatalk::{Article, LuaTalkExt, lua};
+use luatalk::{
+    Article, LuaTalkExt,
+    lang::{IntoWithLang, Lang},
+    lua, momotalk,
+};
 
 use crate::{
     app::state::State,
@@ -32,7 +36,12 @@ pub struct App<S: State> {
 enum Action {
     Show {
         lua_input: LuaInput,
-        writer: RefCell<BufWriter<Box<dyn Write>>>,
+        writer: RefCell<Box<dyn Write>>,
+    },
+
+    Export {
+        lua_input: LuaInput,
+        writer: RefCell<Box<dyn Write>>,
     },
 }
 
@@ -42,6 +51,52 @@ struct LuaInput {
     path_addtion: String,
 
     lua: Lua,
+}
+
+impl From<LuaInputArgs> for LuaInput {
+    fn from(value: LuaInputArgs) -> Self {
+        let LuaInputArgs {
+            input,
+            lib_default,
+            libs,
+        } = value;
+
+        let source = input
+            .contents()
+            .into_diagnostic()
+            .wrap_err("Input file not found")
+            .unwrap_or_default();
+
+        let enable_lib_default = lib_default;
+
+        let path_addtion = libs
+            .iter()
+            .filter(|p| {
+                p.is_dir().tap(|&is| {
+                    if is {
+                        debug!("Add directory path: {}", p.display());
+                    } else {
+                        warn!("Ignore bad directory path: {}", p.display());
+                    }
+                })
+            })
+            .flat_map(|p| {
+                [
+                    App::<state::Initial>::as_lua_path_entry_or_empty(p, "?.lua"),
+                    App::<state::Initial>::as_lua_path_entry_or_empty(p, "?/init.lua"),
+                ]
+            })
+            .collect::<String>();
+
+        let lua = Lua::new();
+
+        Self {
+            source,
+            enable_lib_default,
+            path_addtion,
+            lua,
+        }
+    }
 }
 
 impl<S: State> App<S> {
@@ -62,69 +117,34 @@ impl TryFrom<Args> for App<state::Initial> {
             .filter_level(args.verbose.log_level_filter())
             .init();
 
-        let path_addtion;
-
         let action = match args.command {
-            Commands::Show {
+            Commands::Show { lua_input_args } => {
+                let lua_input = lua_input_args.into();
+                let writer = io::stdout();
+                Action::Show {
+                    lua_input,
+                    writer: writer
+                        .pipe(Box::new)
+                        .pipe(|w| w as Box<dyn Write>)
+                        .pipe(RefCell::new),
+                }
+            }
+
+            Commands::Export {
                 lua_input_args,
                 output,
             } => {
-                let LuaInputArgs {
-                    input,
-                    lib_default,
-                    libs,
-                } = lua_input_args;
-
-                let source = {
-                    debug!("Input file: {}", input.filename());
-                    input
-                        .contents()
-                        .into_diagnostic()
-                        .wrap_err("Input file not found")?
-                };
-                let enable_lib_default = lib_default;
+                let lua_input = lua_input_args.into();
                 let writer = {
-                    const INITIAL_CAPACITY: usize = 128;
-                    path_addtion = libs
-                        .iter()
-                        .filter(|p| {
-                            p.is_dir().tap(|&is| {
-                                if is {
-                                    debug!("Add directory path: {}", p.display());
-                                } else {
-                                    warn!("Ignore bad directory path: {}", p.display());
-                                }
-                            })
-                        })
-                        .flat_map(|p| {
-                            [
-                                Self::as_lua_path_entry_or_empty(p, "?.lua"),
-                                Self::as_lua_path_entry_or_empty(p, "?/init.lua"),
-                            ]
-                        })
-                        .fold(String::with_capacity(INITIAL_CAPACITY), |mut acc, s| {
-                            acc.push_str(&s);
-                            acc
-                        });
-
                     debug!("Output file: {}", output.filename());
                     output
                         .into_writer()
                         .into_diagnostic()?
                         .pipe(Box::new)
                         .pipe(|w| w as Box<dyn Write>)
-                        .pipe(BufWriter::new)
                         .pipe(RefCell::new)
                 };
-                Action::Show {
-                    lua_input: LuaInput {
-                        source,
-                        enable_lib_default,
-                        path_addtion,
-                        lua: Lua::new(),
-                    },
-                    writer,
-                }
+                Action::Export { lua_input, writer }
             }
         }
         .pipe(Rc::new);
@@ -138,10 +158,10 @@ impl TryFrom<Args> for App<state::Initial> {
 
 impl Runnable for App<state::Initial> {
     fn run(self) -> Result<()> {
-        match &*self.action.pipe_ref(Rc::clone) {
-            Action::Show { lua_input, .. } => {
-                App::<state::Initial>::lua_input(self, lua_input)?.run()
-            }
+        match self.action.pipe_ref(Rc::clone).as_ref() {
+            Action::Show { lua_input, .. } => self.lua_input(lua_input)?.run(),
+
+            Action::Export { lua_input, .. } => self.lua_input(lua_input)?.run(),
         }
     }
 }
@@ -181,10 +201,38 @@ impl App<state::Initial> {
 
 impl Runnable for App<state::OfArticle> {
     fn run(self) -> Result<()> {
-        match &*self.action {
+        match self.action.as_ref() {
             Action::Show { writer, .. } => {
                 let mut writer = writer.borrow_mut();
                 writeln!(writer, "{:#?}", self.state.article).into_diagnostic()?;
+                writer.flush().into_diagnostic()
+            }
+
+            Action::Export { writer, .. } => {
+                let mut writer = writer.borrow_mut();
+
+                let talk_history = self
+                    .state
+                    .article
+                    .pages()
+                    .first()
+                    .ok_or_else(|| diagnostic!("Article has no pages"))?
+                    .msgs()
+                    .clone()
+                    .into_with_lang(Lang::En)
+                    .try_into()
+                    .into_diagnostic()?;
+
+                let momotalk_export = momotalk::MomotalkExport {
+                    talk_id: 1,
+                    talk_history,
+                    select_list: Vec::new(),
+                };
+
+                serde_json::to_writer_pretty(writer.as_mut(), &momotalk_export)
+                    .into_diagnostic()?;
+
+                writer.write_all(b"\n").into_diagnostic()?;
                 writer.flush().into_diagnostic()
             }
         }

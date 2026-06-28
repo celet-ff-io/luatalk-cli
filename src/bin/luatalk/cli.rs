@@ -34,6 +34,13 @@ pub enum Commands {
     Show {
         #[command(flatten)]
         lua_input_args: LuaInputArgs,
+    },
+
+    /// (Experimental)
+    /// Export to a file.
+    Export {
+        #[command(flatten)]
+        lua_input_args: LuaInputArgs,
 
         /// Ouptut file. '-' for stdout. Defaults to stdout.
         #[arg(short, long, default_value = "-")]
