@@ -21,7 +21,19 @@ pub struct App {
 }
 
 impl App {
-    fn new(args: CliArgs) -> Result<Self> {
+    fn as_lua_path_entry_or_empty(dir: &Path, file: &str) -> String {
+        dir.join(file)
+            .to_str()
+            .map_or(String::new(), |s| s.to_owned() + ";")
+    }
+}
+
+impl TryFrom<CliArgs> for App {
+    type Error = miette::Report;
+
+    fn try_from(value: CliArgs) -> Result<Self, Self::Error> {
+        let args = value;
+
         env_logger::Builder::new()
             .filter_level(args.verbose.log_level_filter())
             .init();
@@ -30,14 +42,14 @@ impl App {
 
         let action = match args.command {
             CliCommands::Show {
-                lua_input_args: input_lua_args,
+                lua_input_args,
                 output,
             } => {
                 let CliLuaInputArgs {
                     input,
                     lib_default,
                     libs,
-                } = input_lua_args;
+                } = lua_input_args;
 
                 let source = {
                     debug!("Input file: {}", input.filename());
@@ -93,46 +105,11 @@ impl App {
 
         Ok(Self { action })
     }
-
-    fn as_lua_path_entry_or_empty(dir: &Path, file: &str) -> String {
-        dir.join(file)
-            .to_str()
-            .map_or(String::new(), |s| s.to_owned() + ";")
-    }
-}
-
-impl TryFrom<CliArgs> for App {
-    type Error = miette::Report;
-
-    fn try_from(value: CliArgs) -> Result<Self, Self::Error> {
-        App::new(value)
-    }
 }
 
 impl Runnable for App {
     fn run(self) -> Result<()> {
-        self.action.run()
-    }
-}
-
-enum AppAction {
-    Show {
-        lua_input: AppLuaInput,
-        writer: BufWriter<Box<dyn Write>>,
-    },
-}
-
-struct AppLuaInput {
-    source: String,
-    enable_lib_default: bool,
-    path_addtion: String,
-
-    lua: Lua,
-}
-
-impl Runnable for AppAction {
-    fn run(self) -> Result<()> {
-        match self {
+        match self.action {
             AppAction::Show {
                 lua_input:
                     AppLuaInput {
@@ -169,4 +146,19 @@ impl Runnable for AppAction {
             }
         }
     }
+}
+
+enum AppAction {
+    Show {
+        lua_input: AppLuaInput,
+        writer: BufWriter<Box<dyn Write>>,
+    },
+}
+
+struct AppLuaInput {
+    source: String,
+    enable_lib_default: bool,
+    path_addtion: String,
+
+    lua: Lua,
 }

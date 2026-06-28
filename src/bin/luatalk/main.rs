@@ -3,6 +3,7 @@ mod cli;
 
 use clap::Parser;
 use miette::Result;
+use tap::Pipe;
 
 use crate::{
     app::{App, Runnable},
@@ -10,5 +11,5 @@ use crate::{
 };
 
 fn main() -> Result<()> {
-    App::try_from(CliArgs::parse())?.run()
+    CliArgs::parse().pipe(App::try_from)?.run()
 }
