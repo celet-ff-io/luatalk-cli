@@ -185,3 +185,185 @@ pub struct SelectListItem {
     #[serde(rename = "Avatar")]
     pub avatar: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use miette::Result;
+    use pretty_assertions::assert_eq;
+
+    use super::{
+        model::{Body, ImageValue, Msg, Profile, Role, TextValue},
+        *,
+    };
+
+    #[test]
+    fn test_into_content() {
+        let text_body = model::Body::Text(model::TextValue {
+            content: "Hello".to_owned(),
+        });
+        assert_eq!(text_body.into_content(), "Hello");
+
+        let image_body = model::Body::Image(model::ImageValue {
+            url: "http://example.com/image.png".to_owned(),
+        });
+        assert_eq!(image_body.into_content(), "http://example.com/image.png");
+    }
+
+    #[test]
+    fn test_try_into_text() {
+        let text_body = model::Body::Text(model::TextValue {
+            content: "Hello".to_owned(),
+        });
+        assert_eq!(text_body.try_into_text().unwrap(), "Hello");
+
+        let image_body = model::Body::Image(model::ImageValue {
+            url: "http://example.com/image.png".to_owned(),
+        });
+        assert!(image_body.try_into_text().is_err());
+    }
+
+    #[test]
+    fn test_try_from_with_lang_msg_list() -> Result<()> {
+        let her = Profile::builder()
+            .name("Her".to_owned())
+            .avatar(
+                ImageValue::builder()
+                    .url("<placeholder-0>".to_owned())
+                    .build(),
+            )
+            .build()
+            .pipe(Arc::new);
+        let msgs = vec![
+            Msg::builder()
+                .role(Role::Guest)
+                .body(Body::Text(
+                    TextValue::builder()
+                        .content("Example guest message".to_owned())
+                        .build(),
+                ))
+                .profile(her.pipe_ref(Arc::clone))
+                .build(),
+            Msg::builder()
+                .role(Role::Guest)
+                .body(Body::Image(
+                    ImageValue::builder()
+                        .url("<placeholder-1>".to_owned())
+                        .build(),
+                ))
+                .profile(her.pipe_ref(Arc::clone))
+                .build(),
+            Msg::builder()
+                .role(Role::Host)
+                .body(Body::Text(
+                    TextValue::builder()
+                        .content("Example host message".to_owned())
+                        .build(),
+                ))
+                .build(),
+            Msg::builder()
+                .role(Role::Host)
+                .body(Body::Image(
+                    ImageValue::builder()
+                        .url("<placeholder-2>".to_owned())
+                        .build(),
+                ))
+                .build(),
+            Msg::builder()
+                .role(Role::System)
+                .body(Body::Text(
+                    TextValue::builder()
+                        .content("Example system message".to_owned())
+                        .build(),
+                ))
+                .build(),
+            Msg::builder()
+                .role(Role::Reply)
+                .body(Body::Text(
+                    TextValue::builder()
+                        .content("Example reply message".to_owned())
+                        .build(),
+                ))
+                .build(),
+            Msg::builder()
+                .role(Role::BondStory)
+                .body(Body::Text(
+                    TextValue::builder()
+                        .content("Example bond story message".to_owned())
+                        .build(),
+                ))
+                .build(),
+        ];
+
+        let with_lang = WithLang {
+            value: msgs,
+            lang: Lang::En,
+        };
+
+        let got = Vec::<TalkHistoryItem>::try_from(with_lang).unwrap();
+
+        let expected = vec![
+            TalkHistoryItem {
+                id: 1,
+                name: "Her".to_owned(),
+                avatar: "<placeholder-0>".to_owned(),
+                type_: Type::Student,
+                flag: 0,
+                content: "Example guest message".to_owned(),
+            },
+            TalkHistoryItem {
+                id: 2,
+                name: "Her".to_owned(),
+                avatar: "<placeholder-0>".to_owned(),
+                type_: Type::Student,
+                flag: 0,
+                content: "<placeholder-1>".to_owned(),
+            },
+            TalkHistoryItem {
+                id: 3,
+                name: "sensei".to_owned(),
+                avatar: String::new(),
+                type_: Type::Sensei,
+                flag: 0,
+                content: "Example host message".to_owned(),
+            },
+            TalkHistoryItem {
+                id: 4,
+                name: "sensei".to_owned(),
+                avatar: String::new(),
+                type_: Type::Sensei,
+                flag: 0,
+                content: "<placeholder-2>".to_owned(),
+            },
+            TalkHistoryItem {
+                id: 5,
+                name: "systemInfo".to_owned(),
+                avatar: String::new(),
+                type_: Type::Message,
+                flag: 0,
+                content: "Example system message".to_owned(),
+            },
+            TalkHistoryItem {
+                id: 6,
+                name: "Reply".to_owned(),
+                avatar: String::new(),
+                type_: Type::Choice,
+                flag: 0,
+                content: "Example reply message".to_owned(),
+            },
+            TalkHistoryItem {
+                id: 7,
+                name: "Story Event".to_owned(),
+                avatar: String::new(),
+                type_: Type::Story,
+                flag: 0,
+                content: "Example bond story message".to_owned(),
+            },
+        ];
+
+        assert_eq!(got, expected);
+
+        Ok(())
+    }
+}
