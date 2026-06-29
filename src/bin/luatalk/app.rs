@@ -1,6 +1,5 @@
 use std::{
-    cell::RefCell,
-    io::{self, Write},
+    io::Write,
     path::{Path, PathBuf},
     rc::Rc,
     str::FromStr,
@@ -267,6 +266,8 @@ impl Runnable for App<state::OfArticle> {
                     }
 
                     MultiPurposeWriter::Multi(_) => {
+                        let _: Vec<momotalk::MomotalkExport> =
+                            self.state.article.try_into().into_diagnostic()?;
                         todo!()
                     }
                 }
