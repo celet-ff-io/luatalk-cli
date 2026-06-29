@@ -10,8 +10,7 @@ use clap::{
 use clap_stdin::{FileOrStdin, FileOrStdout};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 
-/// Build article from Lua file.
-/// Supports Lua 5.5.
+/// Build article from Lua file (using Lua 5.5).
 #[derive(Debug, Parser)]
 #[command(version)]
 #[command(styles = Styles::styled()
@@ -19,6 +18,11 @@ use clap_verbosity_flag::{InfoLevel, Verbosity};
     .usage(AnsiColor::Yellow.on_default().effects(Effects::BOLD))
     .literal(AnsiColor::Green.on_default().effects(Effects::BOLD))
     .placeholder(AnsiColor::Red.on_default())
+)]
+#[command(
+    after_help = "Visit the crate page at 'https://crates.io/crates/luatalk-cli' \
+        or the repository for more information.
+"
 )]
 pub struct Args {
     #[command(flatten)]
@@ -30,6 +34,10 @@ pub struct Args {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
+    Generate {
+        asset: AssetArg,
+    },
+
     /// Show LuaTalk article in `luatalk::Article` structure string.
     Show {
         #[command(flatten)]
@@ -63,12 +71,23 @@ pub enum Commands {
     },
 }
 
+#[derive(Debug, Clone, ValueEnum)]
+pub enum AssetArg {
+    /// Example input Lua file
+    #[value(name = "example")]
+    Example,
+
+    /// `talk.lua` module enabled by the flag `--lib-default`
+    #[value(name = "lib/talk.lua")]
+    LibTalk,
+}
+
 #[derive(Debug, clap::Args)]
 pub struct LuaInputArgs {
     /// Input Lua file. '-' for stdin.
     pub input: FileOrStdin,
 
-    /// Set this flag to load the default `talk.lua` module hard-coded in program.
+    /// Set this flag to load the `talk.lua` module hard-coded in program.
     #[arg(long)]
     pub lib_default: bool,
 
@@ -80,5 +99,6 @@ pub struct LuaInputArgs {
 #[derive(Debug, Clone, ValueEnum)]
 #[value(rename_all = "kebab-case")]
 pub enum OutputFormatArg {
+    /// Momotalk export JSON format for 'https://github.com/U1805/momotalk'
     Momotalk,
 }

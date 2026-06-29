@@ -19,7 +19,7 @@ use luatalk::{Article, InLang, IntoAndLang, LuaTalkExt, Msg, lua, momotalk};
 
 use crate::{
     app::state::State,
-    cli::{Args, Commands, LuaInputArgs, OutputFormatArg},
+    cli::{Args, AssetArg, Commands, LuaInputArgs, OutputFormatArg},
 };
 
 const DEFAULT_OUTPUTNAME: &str = "article";
@@ -37,7 +37,12 @@ pub struct App<S: State> {
     action: Rc<Action>,
 }
 
+#[derive(Debug, Clone)]
 enum Action {
+    Generate {
+        asset: Asset,
+    },
+
     Show {
         lua_input: LuaInput,
         output_dest: FileOrStdout,
@@ -50,6 +55,22 @@ enum Action {
     },
 }
 
+impl From<AssetArg> for Asset {
+    fn from(value: AssetArg) -> Self {
+        match value {
+            AssetArg::Example => Self::Example,
+            AssetArg::LibTalk => Self::LibTalk,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum Asset {
+    Example,
+    LibTalk,
+}
+
+#[derive(Debug, Clone)]
 struct LuaInput {
     source: String,
     enable_lib_default: bool,
@@ -118,12 +139,14 @@ enum OutputFormat {
     Momotalk,
 }
 
+#[derive(Debug, Clone)]
 enum MultiPurposeWriter {
     Single(FileOrStdout),
 
     Multi(MultiPath),
 }
 
+#[derive(Debug, Clone)]
 enum MultiPath {
     Fmtstr(String),
     Dir { path: PathBuf, filename: String },
@@ -140,6 +163,10 @@ impl TryFrom<Args> for App<state::Initial> {
             .init();
 
         let action = match args.command {
+            Commands::Generate { asset } => Action::Generate {
+                asset: asset.into(),
+            },
+
             Commands::Show { lua_input_args } => Action::Show {
                 lua_input: lua_input_args.into(),
                 output_dest: FileOrStdout::from_str("-").into_diagnostic()?,
@@ -252,6 +279,20 @@ impl FilenameOrDefault for FileOrStdin {
 impl Runnable for App<state::Initial> {
     fn run(self) -> Result<()> {
         match self.action.pipe_ref(Rc::clone).as_ref() {
+            Action::Generate { asset } => match asset {
+                Asset::Example => {
+                    let example = include_str!("../../../assets/lua/input/example.lua");
+                    println!("{example}");
+                    Ok(())
+                }
+
+                Asset::LibTalk => {
+                    let lib_talk = include_str!("../../../assets/lua/lib/talk.lua");
+                    println!("{lib_talk}");
+                    Ok(())
+                }
+            },
+
             Action::Show { lua_input, .. } => self.lua_input(lua_input)?.run(),
 
             Action::Export { lua_input, .. } => self.lua_input(lua_input)?.run(),
@@ -382,6 +423,8 @@ impl Runnable for App<state::OfArticle> {
                     }
                 }
             }
+
+            _ => Err(diagnostic!("Invalid action for this state").into()),
         }
     }
 }
