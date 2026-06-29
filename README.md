@@ -2,15 +2,39 @@
 
 Build article from Lua file.
 
+Using Lua version 5.5.
+
 ## TODO
 
 - Convert the article in pictures.
 
 ## Usage
 
-Use `luatalk help` and `luatalk help <COMMAND>` for more information.
+Use `luatalk help` and `luatalk help <COMMAND>` for detailed CLI usage.
 
-### With DSL from [`talk.lua`](./assets/lua/talk.lua)
+### Export
+
+Export your article to different formats.
+
+|Format|Description|
+|---|---|
+|`momotalk`|JSON format for [MomoTalk Editor](https://github.com/U1805/momotalk/)|
+
+#### Export in pages to files
+
+```bash
+# Make directory `example/` and write to `example/example_1.json`, ...
+luatalk export --lib-default example.lua -f momotalk
+# Make directory `exam/ple/` and write to `exam/ple/example_1.json`, ...
+luatlalk export --lib-default example.lua -f momotalk -o exam/ple
+luatlalk export --lib-default example.lua -f momotalk -o example/e_{i}.json
+```
+
+Will create the directory if not exists.
+
+### Show
+
+#### With DSL from [`talk.lua`](./assets/lua/talk.lua)
 
 `show` a file like [`example.lua`](./assets/lua/input/example.lua),
 which uses DSL features defined in [`talk.lua`](./assets/lua/talk.lua).
@@ -37,13 +61,22 @@ luatalk show --lib /path/to/luatalk-cli/assets/lua/lib example.lua
 cp /path/to/luatalk-cli/assets/lua/lib/talk.lua talk.lua && luatalk show example.lua
 ```
 
-### With raw Lua table
+#### With raw Lua table
 
 `show` a file like [`raw_example.lua`](./assets/lua/input/raw_example.lua),
 which directly returns the full `Article` table.
 
 ```bash
 lua show raw_example.lua
+```
+
+### Generate
+
+To generate useful assets file hard-coded in the binary.
+
+```bash
+luatalk generate example # Output `example.lua`
+luatalk generate lib/talk # Output `talk.lua`
 ```
 
 ## Project goals

@@ -215,17 +215,7 @@ impl TryFrom<Args> for App<state::Initial> {
                         debug!("Output file pattern: {path}");
                         MultiPath::Fmtstr(path.to_owned())
                     } else {
-                        let path = {
-                            let path_str = &path;
-                            let path = Path::new(&path);
-                            debug!("Output dir: {path_str}");
-                            if !path.exists() {
-                                eprintln!("Creating output directory: {path_str}");
-                                fs::create_dir_all(path).into_diagnostic()?;
-                                debug!("Output directory created");
-                            };
-                            path.to_owned()
-                        };
+                        let path = path.tap(|p| debug!("Output dir: {p}")).into();
                         let filename = lua_input_args
                             .input
                             .filename_or_default(DEFAULT_OUTPUTNAME)?;
@@ -393,14 +383,11 @@ impl Runnable for App<state::OfArticle> {
                         let mut momotalk_exports = momotalk_exports.into_iter().zip(1..);
                         match path {
                             MultiPath::Dir { path, filename } => {
+                                Self::check_or_create_dir(path)?;
                                 momotalk_exports.try_for_each(|(momotalk_export, i)| {
-                                    let output_file =
+                                    let path =
                                         path.join(format!("{filename}_{:width_auto$}.json", i,));
-                                    Self::export_momotalk_page_to_file(
-                                        &momotalk_export,
-                                        i,
-                                        &output_file,
-                                    )
+                                    Self::export_momotalk_page_to_file(&momotalk_export, i, &path)
                                 })
                             }
 
@@ -408,15 +395,12 @@ impl Runnable for App<state::OfArticle> {
                                 let mut vars = HashMap::with_capacity(1);
                                 momotalk_exports.try_for_each(|(momotalk_export, i)| {
                                     vars.insert(INDEX_KEY.to_owned(), i.to_string());
-                                    let output_path = strfmt::strfmt(fmtstr, &vars)
+                                    let path = strfmt::strfmt(fmtstr, &vars)
                                         .into_diagnostic()
                                         .wrap_err("Failed to format output file path string")?
                                         .pipe(PathBuf::from);
-                                    Self::export_momotalk_page_to_file(
-                                        &momotalk_export,
-                                        i,
-                                        &output_path,
-                                    )
+                                    path.parent().map(Self::check_or_create_dir).transpose()?;
+                                    Self::export_momotalk_page_to_file(&momotalk_export, i, &path)
                                 })
                             }
                         }
@@ -439,15 +423,32 @@ impl App<state::OfArticle> {
         writer.flush().into_diagnostic()
     }
 
+    fn check_or_create_dir(path: &Path) -> Result<()> {
+        if let Ok(metadata) = path.metadata() {
+            if metadata.is_file() {
+                return Err(diagnostic!(
+                    "A file exists already has path of output destination directory: {}",
+                    path.display()
+                )
+                .into());
+            }
+        } else {
+            eprintln!("Creating directory: {}", path.display());
+            fs::create_dir_all(path).into_diagnostic()?;
+        }
+        Ok(())
+    }
+
     fn export_momotalk_page_to_file(
         momotalk_export: &momotalk::MomotalkExport,
         i: usize,
-        output_path: &Path,
+        path: &Path,
     ) -> Result<()> {
-        debug!("Output page {i} to: {}", output_path.display());
-        let mut writer = fs::File::create(output_path)
+        let path_display = path.display();
+        debug!("Output page {i} to: {path_display}");
+        let mut writer = fs::File::create(path)
             .into_diagnostic()
-            .wrap_err_with(|| format!("Failed to create output file: {}", output_path.display()))?;
+            .wrap_err_with(|| format!("Failed to create output file: {path_display}"))?;
         Self::export_momotalk_to_writer(momotalk_export, &mut writer)
     }
 }
