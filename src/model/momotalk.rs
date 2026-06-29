@@ -6,13 +6,17 @@
 
 use std::num::TryFromIntError;
 
+use log::debug;
 use serde::Serialize;
 use serde_repr::Serialize_repr;
-use tap::Pipe;
+use tap::{Pipe, Tap};
 
-use crate::model::{
-    self,
-    lang::{Lang, WithLang},
+use crate::{
+    lang::IntoWithLang,
+    model::{
+        self,
+        lang::{Lang, WithLang},
+    },
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -63,7 +67,7 @@ type MsgList = Vec<model::Msg>;
 impl TryFrom<WithLang<MsgList>> for Vec<TalkHistoryItem> {
     type Error = MomotalkExportError;
 
-    fn try_from(msgs: WithLang<MsgList>) -> Result<Self, MomotalkExportError> {
+    fn try_from(msgs: WithLang<MsgList>) -> Result<Self, Self::Error> {
         let WithLang { value: msgs, lang } = msgs;
         msgs.into_iter()
             .enumerate()
@@ -190,6 +194,38 @@ pub struct SelectListItem {
 
     #[serde(rename = "Avatar")]
     pub avatar: String,
+}
+
+impl TryFrom<model::Article> for Vec<MomotalkExport> {
+    type Error = MomotalkExportError;
+
+    fn try_from(article: model::Article) -> Result<Self, Self::Error> {
+        article
+            .into_pages()
+            .into_iter()
+            .enumerate()
+            .map(|(i, page)| -> Result<MomotalkExport, MomotalkExportError> {
+                let n = (i + 1)
+                    .pipe(i32::try_from)
+                    .map_err(MomotalkExportError::TryFromInt)?;
+                let talk_history = page
+                    .into_iter()
+                    .collect::<Vec<model::Msg>>()
+                    .into_with_lang(Lang::En)
+                    .try_into()?;
+                let select_list = Vec::new();
+                MomotalkExport {
+                    talk_id: n,
+                    talk_history,
+                    select_list,
+                }
+                .tap(|_| {
+                    debug!("Build MomotalkExport structure success for page {n}");
+                })
+                .pipe(Ok)
+            })
+            .collect()
+    }
 }
 
 #[cfg(test)]
