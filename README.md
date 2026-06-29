@@ -2,12 +2,18 @@
 
 Build article from Lua file.
 
-Using Lua version 5.5.
+| English|[简体中文](./docs/README-zh_cn.md)|
+|---|---|
 
 ## TODO
 
 - Make article exportable to Typst code
   to make it easy to render as pictures page by page.
+
+## Features
+
+- Article has **pages** make it easy to export to multiple files.
+- Build article from Lua file. Using Lua version 5.5.
 
 ## Usage
 
@@ -48,18 +54,20 @@ luatalk export --lib-default example.lua -f momotalk --concat-pages
 luatalk export --lib-default example.lua -f momotalk --concat-pages -o output.json
 ```
 
-### Show
+### Write your input
 
-#### With DSL from [`talk.lua`](./assets/lua/talk.lua)
+`show` is a command to show your input article structure.
 
-`show` a file like [`example.lua`](./assets/lua/input/example.lua),
-which uses DSL features defined in [`talk.lua`](./assets/lua/talk.lua).
+#### With DSL from [`talk.lua`](./assets/lua/lib/talk.lua)
+
+A file like [`example.lua`](./assets/lua/input/example.lua)
+uses DSL features defined in [`talk.lua`](./assets/lua/lib/talk.lua).
 
 You may:
 
 - Use `--lib-default` flag to load hard-coded `talk.lua` in the binary (Recommended).
 - Use `--lib` to add the directory of `talk.lua` to Lua package path.
-- Copy [`talk.lua`](./assets/lua/talk.lua) to existing Lua package path like `.`,
+- Copy `talk.lua` to existing Lua package path like `.`,
   or just add its content to your input file.
 
 ```bash
@@ -79,8 +87,8 @@ cp /path/to/luatalk-cli/assets/lua/lib/talk.lua talk.lua && luatalk show example
 
 #### With raw Lua table
 
-`show` a file like [`raw_example.lua`](./assets/lua/input/raw_example.lua),
-which directly returns the full `Article` table.
+A file like [`raw_example.lua`](./assets/lua/input/raw_example.lua)
+directly returns the full `Article` table.
 
 ```bash
 lua show raw_example.lua
@@ -95,6 +103,14 @@ They are nothing different from the original files in `./assets/` directory.
 luatalk generate example # Output `example.lua`
 luatalk generate lib/talk # Output `talk.lua`
 ```
+
+## Install
+
+- Download prebuilt binary from Release if there is one suitable for your platform.
+- Use `cargo install luatalk-cli`
+  to fetch source from [crates.io](https://crates.io/crates/luatalk-cli), build and install it.
+- Download source and use `cargo run` to try it
+or use `cargo build --release` to build release yourself.
 
 ## Project goals
 
