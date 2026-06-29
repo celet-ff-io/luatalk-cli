@@ -6,7 +6,8 @@ Using Lua version 5.5.
 
 ## TODO
 
-- Convert the article in pictures.
+- Make article exportable to Typst code
+  to make it easy to render as pictures page by page.
 
 ## Usage
 
@@ -22,15 +23,30 @@ Export your article to different formats.
 
 #### Export in pages to files
 
+You may set the output destination as either **directory**
+or **file path in format string**.
+
 ```bash
 # Make directory `example/` and write to `example/example_1.json`, ...
 luatalk export --lib-default example.lua -f momotalk
-# Make directory `exam/ple/` and write to `exam/ple/example_1.json`, ...
-luatlalk export --lib-default example.lua -f momotalk -o exam/ple
-luatlalk export --lib-default example.lua -f momotalk -o example/e_{i}.json
+# Make directory `output/dir/` and write to `output/dir/example_1.json`, ...
+luatlalk export --lib-default example.lua -f momotalk -o output/dir
+# Make directory `output/` and write to `output/e_1.json`, ...
+luatlalk export --lib-default example.lua -f momotalk -o output/e_{i}.json
+# If you really want, the following command will work as expected too
+luatlalk export --lib-default example.lua -f momotalk -o output/{i}/{i}.json
 ```
 
-Will create the directory if not exists.
+#### Concatenate all pages to a single file
+
+`-` as output for stdout.
+
+```bash
+# Write to stdout
+luatalk export --lib-default example.lua -f momotalk --concat-pages
+# Write to a file
+luatalk export --lib-default example.lua -f momotalk --concat-pages -o output.json
+```
 
 ### Show
 
