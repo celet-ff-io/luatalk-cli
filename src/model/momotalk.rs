@@ -15,7 +15,7 @@ use crate::{
     lang::IntoWithLang,
     model::{
         self,
-        lang::{Lang, WithLang},
+        lang::{AndLang, Lang},
     },
 };
 
@@ -64,11 +64,11 @@ pub enum Type {
 
 type MsgList = Vec<model::Msg>;
 
-impl TryFrom<WithLang<MsgList>> for Vec<TalkHistoryItem> {
+impl TryFrom<AndLang<MsgList>> for Vec<TalkHistoryItem> {
     type Error = MomotalkExportError;
 
-    fn try_from(msgs: WithLang<MsgList>) -> Result<Self, Self::Error> {
-        let WithLang { value: msgs, lang } = msgs;
+    fn try_from(msgs: AndLang<MsgList>) -> Result<Self, Self::Error> {
+        let AndLang { value: msgs, lang } = msgs;
         msgs.into_iter()
             .enumerate()
             .map(|(i, msg)| -> Result<TalkHistoryItem, MomotalkExportError> {
@@ -117,7 +117,7 @@ impl TryFrom<WithLang<MsgList>> for Vec<TalkHistoryItem> {
                         type_ = Type::Choice;
                         name = match lang {
                             Lang::En => "Reply",
-                            Lang::Zh => "回复",
+                            Lang::ZhCn => "回复",
                         }
                         .to_owned();
                         avatar = String::new();
@@ -127,7 +127,7 @@ impl TryFrom<WithLang<MsgList>> for Vec<TalkHistoryItem> {
                         type_ = Type::Story;
                         name = match lang {
                             Lang::En => "Story Event",
-                            Lang::Zh => "羁绊剧情",
+                            Lang::ZhCn => "羁绊剧情",
                         }
                         .to_owned();
                         avatar = String::new();
@@ -338,7 +338,7 @@ mod tests {
                 .build(),
         ];
 
-        let with_lang = WithLang {
+        let with_lang = AndLang {
             value: msgs,
             lang: Lang::En,
         };
