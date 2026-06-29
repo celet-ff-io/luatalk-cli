@@ -89,6 +89,7 @@ lua show raw_example.lua
 ### Generate
 
 To generate useful assets file hard-coded in the binary.
+They are nothing different from the original files in `./assets/` directory.
 
 ```bash
 luatalk generate example # Output `example.lua`

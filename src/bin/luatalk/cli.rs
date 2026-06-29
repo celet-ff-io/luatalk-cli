@@ -34,9 +34,9 @@ pub struct Args {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    Generate {
-        asset: AssetArg,
-    },
+    /// Generate useful assets file hard-coded in the binary.
+    /// You can also obtain them at source.
+    Generate { asset: AssetArg },
 
     /// Show LuaTalk article in `luatalk::Article` structure string.
     Show {
