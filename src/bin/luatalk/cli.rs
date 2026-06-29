@@ -57,7 +57,7 @@ pub enum Commands {
         /// For multiple files: a directory path,
         /// or a format string with placeholders for page index starts from 1.
         /// e.g. `article_{i}.json`.
-        /// `None` stands for directory named after base jame of input file.
+        /// `None` stands for directory named after stem portion of input file name.
         #[arg(short, long)]
         output: Option<FileOrStdout>,
     },

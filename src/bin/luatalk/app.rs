@@ -105,6 +105,7 @@ impl From<LuaInputArgs> for LuaInput {
 }
 
 impl LuaInput {
+    #[inline]
     fn as_lua_path_entry_or_empty(dir: &Path, file: &str) -> String {
         dir.join(file)
             .to_str()
@@ -175,30 +176,32 @@ impl TryFrom<Args> for App<state::Initial> {
                             )
                             .into());
                         }
+                        .to_owned()
                     } else {
                         certain_dir = true;
-                        lua_input_args.input.filename_or_default(DEFAULT_OUTPUTNAME)
+                        lua_input_args
+                            .input
+                            .filename_or_default(DEFAULT_OUTPUTNAME)?
                     };
 
-                    if !certain_dir && strfmt_re.is_match(path) {
+                    if !certain_dir && strfmt_re.is_match(&path) {
                         debug!("Output file pattern: {path}");
                         MultiPath::Fmtstr(path.to_owned())
                     } else {
                         let path = {
-                            let path_str = path;
-                            let path = PathBuf::from(path);
+                            let path_str = &path;
+                            let path = Path::new(&path);
                             debug!("Output dir: {path_str}");
                             if !path.exists() {
                                 eprintln!("Creating output directory: {path_str}");
-                                fs::create_dir_all(&path).into_diagnostic()?;
+                                fs::create_dir_all(path).into_diagnostic()?;
                                 debug!("Output directory created");
                             };
-                            path
+                            path.to_owned()
                         };
                         let filename = lua_input_args
                             .input
-                            .filename_or_default(DEFAULT_OUTPUTNAME)
-                            .to_owned();
+                            .filename_or_default(DEFAULT_OUTPUTNAME)?;
                         MultiPath::Dir { path, filename }
                     }
                     .pipe(MultiPurposeWriter::Multi)
@@ -221,16 +224,28 @@ impl TryFrom<Args> for App<state::Initial> {
 }
 
 trait FilenameOrDefault {
-    fn filename_or_default<'a>(&'a self, default: &'a str) -> &'a str;
+    fn filename_or_default(&self, default: &str) -> Result<String>;
 }
 
 impl FilenameOrDefault for FileOrStdin {
-    fn filename_or_default<'a>(&'a self, default: &'a str) -> &'a str {
-        if self.is_file() {
-            self.filename()
+    #[inline]
+    fn filename_or_default(&self, default: &str) -> Result<String> {
+        if self.is_stdin() {
+            default.to_owned()
         } else {
-            default
+            self.filename()
+                .pipe(Path::new)
+                .file_stem()
+                .ok_or_else(|| {
+                    diagnostic!(
+                        "Input file path does not have a valid file name: {}",
+                        self.filename()
+                    )
+                })?
+                .to_string_lossy()
+                .into_owned()
         }
+        .pipe(Ok)
     }
 }
 
