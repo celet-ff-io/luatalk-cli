@@ -11,7 +11,7 @@ use serde::Serialize;
 use serde_repr::Serialize_repr;
 use tap::{Pipe, Tap};
 
-use crate::model::{self, IntoAndLang};
+use crate::model::{self, InLang, IntoAndLang};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct MomotalkExport {
@@ -193,7 +193,9 @@ pub struct SelectListItem {
 impl TryFrom<model::Article> for Vec<MomotalkExport> {
     type Error = MomotalkExportError;
 
-    fn try_from(article: model::Article) -> Result<Self, Self::Error> {
+    fn try_from(value: model::Article) -> Result<Self, Self::Error> {
+        let article = value;
+        let lang = article.lang();
         article
             .into_pages()
             .into_iter()
@@ -205,7 +207,7 @@ impl TryFrom<model::Article> for Vec<MomotalkExport> {
                 let talk_history = page
                     .into_iter()
                     .collect::<Vec<model::Msg>>()
-                    .into_and_lang(model::Lang::En)
+                    .into_and_lang(lang)
                     .try_into()?;
                 let select_list = Vec::new();
                 MomotalkExport {
