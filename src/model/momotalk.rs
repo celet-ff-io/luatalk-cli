@@ -198,12 +198,16 @@ impl TryFrom<model::Article> for Vec<MomotalkExport> {
         let lang = article.lang();
         article
             .into_pages()
-            .into_iter()
-            .enumerate()
-            .map(|(i, page)| -> Result<MomotalkExport, MomotalkExportError> {
-                let n = (i + 1)
+            .pipe(|pages| {
+                pages
+                    .len()
                     .pipe(i32::try_from)
-                    .map_err(MomotalkExportError::TryFromInt)?;
+                    .map_err(MomotalkExportError::TryFromInt)
+                    .map(|_| pages)
+            })?
+            .into_iter()
+            .zip(1..)
+            .map(|(page, i)| -> Result<MomotalkExport, MomotalkExportError> {
                 let talk_history = page
                     .into_iter()
                     .collect::<Vec<model::Msg>>()
@@ -211,12 +215,12 @@ impl TryFrom<model::Article> for Vec<MomotalkExport> {
                     .try_into()?;
                 let select_list = Vec::new();
                 MomotalkExport {
-                    talk_id: n,
+                    talk_id: i,
                     talk_history,
                     select_list,
                 }
                 .tap(|_| {
-                    debug!("Build MomotalkExport structure success for page {n}");
+                    debug!("Build MomotalkExport structure success for page {i}");
                 })
                 .pipe(Ok)
             })
