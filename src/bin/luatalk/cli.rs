@@ -30,14 +30,13 @@ pub struct Args {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Show Lua file in `luatalk::Article` structure string.
+    /// Show LuaTalk article in `luatalk::Article` structure string.
     Show {
         #[command(flatten)]
         lua_input_args: LuaInputArgs,
     },
 
-    /// (Experimental)
-    /// Export to a file.
+    /// Export LuaTalk article.
     Export {
         #[command(flatten)]
         lua_input_args: LuaInputArgs,
@@ -46,11 +45,17 @@ pub enum Commands {
         #[arg(short, long)]
         format: OutputFormatArg,
 
-        /// Concatenate all pages into a single page
+        /// Concatenate all pages into a single page.
         #[arg(long, default_value_t = false)]
         concat_pages: bool,
 
-        /// Ouptut file. '-' for stdout.
+        /// Ouptut.
+        ///
+        /// For one file: a file path, or `-` for stdout.
+        ///
+        /// For multiple files: a directory path,
+        /// or a format string with placeholders for page index starts from 1.
+        /// e.g. `article_{i}.json`.
         #[arg(short, long, default_value = "-")]
         output: FileOrStdout,
     },
