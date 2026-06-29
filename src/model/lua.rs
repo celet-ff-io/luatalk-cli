@@ -15,6 +15,7 @@ use crate::{error::LuaParseError, model};
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct Article {
+    pub lang: Lang,
     pub pages: Vec<Page>,
 }
 
@@ -37,8 +38,9 @@ impl FromLua for Article {
 
 impl From<model::Article> for Article {
     fn from(article: model::Article) -> Self {
-        let model::Article { pages } = article;
+        let model::Article { lang, pages } = article;
         Article {
+            lang: lang.into(),
             pages: pages.into_iter().map(Into::into).collect(),
         }
     }
@@ -46,9 +48,37 @@ impl From<model::Article> for Article {
 
 impl From<Article> for model::Article {
     fn from(article: Article) -> Self {
-        let Article { pages } = article;
+        let Article { lang, pages } = article;
         model::Article {
+            lang: lang.into(),
             pages: pages.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
+pub enum Lang {
+    #[serde(rename = "en")]
+    En,
+
+    #[serde(rename = "zh-CN")]
+    ZhCn,
+}
+
+impl From<model::Lang> for Lang {
+    fn from(lang: model::Lang) -> Self {
+        match lang {
+            model::Lang::En => Lang::En,
+            model::Lang::ZhCn => Lang::ZhCn,
+        }
+    }
+}
+
+impl From<Lang> for model::Lang {
+    fn from(lang: Lang) -> Self {
+        match lang {
+            Lang::En => model::Lang::En,
+            Lang::ZhCn => model::Lang::ZhCn,
         }
     }
 }

@@ -11,11 +11,7 @@ use miette::{IntoDiagnostic, Result, WrapErr, diagnostic};
 use mlua::{Lua, Table};
 use tap::{Pipe, Tap};
 
-use luatalk::{
-    Article, LuaTalkExt, Msg,
-    lang::{IntoWithLang, Lang},
-    lua, momotalk,
-};
+use luatalk::{Article, IntoAndLang, Lang, LuaTalkExt, Msg, lua, momotalk};
 
 use crate::{
     app::state::State,
@@ -108,6 +104,8 @@ enum OutputFormat {
 
 enum MultiPurposeWriter {
     Single(FileOrStdout),
+
+    #[allow(dead_code)]
     Multi(PathBuf),
 }
 
@@ -247,7 +245,7 @@ impl Runnable for App<state::OfArticle> {
                             .into_iter()
                             .flatten()
                             .collect::<Vec<Msg>>()
-                            .into_with_lang(Lang::En)
+                            .into_and_lang(Lang::En)
                             .try_into()
                             .into_diagnostic()?;
                         let momotalk_export = momotalk::MomotalkExport {

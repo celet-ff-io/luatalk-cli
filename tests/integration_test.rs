@@ -1,8 +1,7 @@
 use std::sync::{Arc, OnceLock};
 
 use luatalk::{
-    Article, Body, ImageValue, LuaTalkExt, Msg, Page, Profile, Role, TextValue,
-    lang::{IntoWithLang, Lang},
+    Article, Body, ImageValue, IntoAndLang, Lang, LuaTalkExt, Msg, Page, Profile, Role, TextValue,
     lua, momotalk,
 };
 use miette::{IntoDiagnostic, Result, diagnostic};
@@ -42,6 +41,7 @@ fn check_article() -> Result<()> {
             .build()
             .pipe(Arc::new);
         Article::builder()
+            .lang(Lang::En)
             .pages(vec![
                 Page::builder()
                     .msgs(vec![
@@ -150,7 +150,7 @@ fn export_to_momotalk_export_json() -> Result<()> {
                 .ok_or_else(|| diagnostic!("Article has no pages"))?
                 .msgs()
                 .clone()
-                .into_with_lang(Lang::En)
+                .into_and_lang(Lang::En)
                 .try_into()
                 .into_diagnostic()?
         };

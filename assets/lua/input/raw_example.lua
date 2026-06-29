@@ -2,6 +2,7 @@
 -- The evaluated result should be as same as `example.lua`.
 
 return {
+	lang = "en",
 	pages = {
 		{
 			msgs = {

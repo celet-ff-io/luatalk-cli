@@ -6,7 +6,7 @@
 //!
 //! ```
 //! use std::sync::Arc;
-//! use luatalk::{Article, Body, ImageValue, LuaTalkExt, Msg, Page, Profile, Role, TextValue, lua};
+//! use luatalk::{Article, Body, ImageValue, Lang, LuaTalkExt, Msg, Page, Profile, Role, TextValue, lua};
 //! use miette::{IntoDiagnostic, Result, WrapErr};
 //! use mlua::Lua;
 //! use tap::Pipe;
@@ -30,6 +30,7 @@
 //!         .build()
 //!         .pipe(Arc::new);
 //!     Article::builder()
+//!         .lang(Lang::En)
 //!         .pages(vec![
 //!             Page::builder()
 //!                 .msgs(vec![
@@ -110,8 +111,9 @@ mod talk;
 
 pub use error::LuaParseError;
 
+pub use model::{AndLang, InLang, IntoAndLang, Lang};
 pub use model::{Article, Body, Msg, Page, Profile};
 pub use model::{ImageValue, Role, TextValue};
-pub use model::{lang, lua, momotalk};
+pub use model::{lua, momotalk};
 
 pub use talk::{LuaTalkExt, LuaTalkLibError};

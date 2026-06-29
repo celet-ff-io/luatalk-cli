@@ -11,13 +11,7 @@ use serde::Serialize;
 use serde_repr::Serialize_repr;
 use tap::{Pipe, Tap};
 
-use crate::{
-    lang::IntoWithLang,
-    model::{
-        self,
-        lang::{AndLang, Lang},
-    },
-};
+use crate::model::{self, IntoAndLang};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct MomotalkExport {
@@ -64,11 +58,11 @@ pub enum Type {
 
 type MsgList = Vec<model::Msg>;
 
-impl TryFrom<AndLang<MsgList>> for Vec<TalkHistoryItem> {
+impl TryFrom<model::AndLang<MsgList>> for Vec<TalkHistoryItem> {
     type Error = MomotalkExportError;
 
-    fn try_from(msgs: AndLang<MsgList>) -> Result<Self, Self::Error> {
-        let AndLang { value: msgs, lang } = msgs;
+    fn try_from(msgs: model::AndLang<MsgList>) -> Result<Self, Self::Error> {
+        let model::AndLang { value: msgs, lang } = msgs;
         msgs.into_iter()
             .enumerate()
             .map(|(i, msg)| -> Result<TalkHistoryItem, MomotalkExportError> {
@@ -116,8 +110,8 @@ impl TryFrom<AndLang<MsgList>> for Vec<TalkHistoryItem> {
                     model::Role::Reply => {
                         type_ = Type::Choice;
                         name = match lang {
-                            Lang::En => "Reply",
-                            Lang::ZhCn => "回复",
+                            model::Lang::En => "Reply",
+                            model::Lang::ZhCn => "回复",
                         }
                         .to_owned();
                         avatar = String::new();
@@ -126,8 +120,8 @@ impl TryFrom<AndLang<MsgList>> for Vec<TalkHistoryItem> {
                     model::Role::BondStory => {
                         type_ = Type::Story;
                         name = match lang {
-                            Lang::En => "Story Event",
-                            Lang::ZhCn => "羁绊剧情",
+                            model::Lang::En => "Story Event",
+                            model::Lang::ZhCn => "羁绊剧情",
                         }
                         .to_owned();
                         avatar = String::new();
@@ -211,7 +205,7 @@ impl TryFrom<model::Article> for Vec<MomotalkExport> {
                 let talk_history = page
                     .into_iter()
                     .collect::<Vec<model::Msg>>()
-                    .into_with_lang(Lang::En)
+                    .into_and_lang(model::Lang::En)
                     .try_into()?;
                 let select_list = Vec::new();
                 MomotalkExport {
@@ -234,6 +228,8 @@ mod tests {
 
     use miette::Result;
     use pretty_assertions::assert_eq;
+
+    use crate::IntoAndLang;
 
     use super::{
         model::{Body, ImageValue, Msg, Profile, Role, TextValue},
@@ -338,12 +334,7 @@ mod tests {
                 .build(),
         ];
 
-        let with_lang = AndLang {
-            value: msgs,
-            lang: Lang::En,
-        };
-
-        let got = Vec::<TalkHistoryItem>::try_from(with_lang).unwrap();
+        let got: Vec<TalkHistoryItem> = msgs.into_and_lang(model::Lang::En).try_into().unwrap();
 
         let expected = vec![
             TalkHistoryItem {

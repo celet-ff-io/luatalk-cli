@@ -23,6 +23,7 @@ local aru =
 	{ name = [[Aru]], avatar = { url = [[https://BlueArcbox.github.io/resources/Avatars/Kivo/Released/10000.webp]] } }
 
 return {
+	lang = "en",
 	pages = {
 		page({
 			guest(aru, [[Example guest message]]),

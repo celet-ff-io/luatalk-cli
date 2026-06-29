@@ -1,4 +1,3 @@
-pub mod lang;
 pub mod lua;
 pub mod momotalk;
 
@@ -9,6 +8,8 @@ use typed_builder::TypedBuilder;
 
 #[derive(Debug, Clone, PartialEq, Eq, Getters, TypedBuilder)]
 pub struct Article {
+    pub(crate) lang: Lang,
+
     #[getset(get = "pub")]
     pub(crate) pages: Vec<Page>,
 }
@@ -16,6 +17,47 @@ pub struct Article {
 impl Article {
     pub fn into_pages(self) -> Vec<Page> {
         self.pages
+    }
+}
+
+impl InLang for Article {
+    fn lang(&self) -> Lang {
+        self.lang
+    }
+}
+
+pub trait InLang {
+    fn lang(&self) -> Lang;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Lang {
+    En,
+    ZhCn,
+}
+
+/// Value with a language tag
+pub struct AndLang<T> {
+    pub value: T,
+
+    pub lang: Lang,
+}
+
+impl InLang for Lang {
+    fn lang(&self) -> Lang {
+        *self
+    }
+}
+
+pub trait IntoAndLang: Sized {
+    fn into_and_lang(self, lang: Lang) -> AndLang<Self> {
+        AndLang { value: self, lang }
+    }
+}
+
+impl<T> IntoAndLang for T {
+    fn into_and_lang(self, lang: Lang) -> AndLang<Self> {
+        AndLang { value: self, lang }
     }
 }
 

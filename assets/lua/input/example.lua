@@ -22,6 +22,7 @@ local image = talk.body_image -- Remember this returns `Body`, not `Image`
 local her = { name = [[Her]], avatar = { url = [[<placeholder-0>]] } }
 
 return {
+	lang = "en",
 	pages = {
 		page({
 			guest(her, [[Example guest message]]),
