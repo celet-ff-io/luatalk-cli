@@ -1,8 +1,8 @@
 use std::sync::{Arc, OnceLock};
 
 use luatalk::{
-    Article, Body, ImageValue, IntoAndLang, Lang, LuaTalkExt, Msg, Page, Profile, Role, TextValue,
-    lua, momotalk,
+    Article, Body, ImageValue, InLang, IntoAndLang, Lang, LuaTalkExt, Msg, Page, Profile, Role,
+    TextValue, lua, momotalk,
 };
 use miette::{IntoDiagnostic, Result, diagnostic};
 use mlua::Lua;
@@ -136,21 +136,23 @@ fn check_article_raw() -> Result<()> {
 }
 
 #[test]
-fn export_to_momotalk_export_json() -> Result<()> {
+fn export_page_to_momotalk_export_json() -> Result<()> {
     let got = {
         let talk_history: Vec<momotalk::TalkHistoryItem> = {
             let lua =
                 Lua::new().pipe(|lua| lua.load_default_lib().into_diagnostic().map(|_| lua))?;
             let chunk = include_str!("fixtures/example_Momotalk-export.lua");
-            lua::Article::from_chunk(chunk, &lua)
+            let article = lua::Article::from_chunk(chunk, &lua)
                 .into_diagnostic()?
-                .pipe(Article::from)
-                .pages()
+                .pipe(Article::from);
+            let lang = article.lang();
+            article
+                .into_pages()
                 .first()
                 .ok_or_else(|| diagnostic!("Article has no pages"))?
                 .msgs()
                 .clone()
-                .into_and_lang(Lang::En)
+                .into_and_lang(lang)
                 .try_into()
                 .into_diagnostic()?
         };
