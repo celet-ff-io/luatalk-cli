@@ -471,9 +471,11 @@ dependencies = [
  "miette",
  "mlua",
  "pretty_assertions",
+ "regex",
  "serde",
  "serde_json",
  "serde_repr",
+ "strfmt",
  "tap",
  "thiserror",
  "typed-builder",
@@ -841,6 +843,12 @@ name = "smallvec"
 version = "1.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
+
+[[package]]
+name = "strfmt"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "29fdc163db75f7b5ffa3daf0c5a7136fb0d4b2f35523cd1769da05e034159feb"
 
 [[package]]
 name = "strsim"

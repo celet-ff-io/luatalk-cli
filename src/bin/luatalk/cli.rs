@@ -49,15 +49,17 @@ pub enum Commands {
         #[arg(long, default_value_t = false)]
         concat_pages: bool,
 
-        /// Ouptut.
+        /// Ouptut. Defaults to `None`.
         ///
         /// For one file: a file path, or `-` for stdout.
+        /// `None` stands for stdout.
         ///
         /// For multiple files: a directory path,
         /// or a format string with placeholders for page index starts from 1.
         /// e.g. `article_{i}.json`.
-        #[arg(short, long, default_value = "-")]
-        output: FileOrStdout,
+        /// `None` stands for directory named after base jame of input file.
+        #[arg(short, long)]
+        output: Option<FileOrStdout>,
     },
 }
 

@@ -1,14 +1,18 @@
 use std::{
+    collections::HashMap,
+    fs,
     io::Write,
     path::{Path, PathBuf},
     rc::Rc,
     str::FromStr,
 };
 
-use clap_stdin::FileOrStdout;
+use clap_stdin::{FileOrStdin, FileOrStdout};
+use const_format::formatcp;
 use log::{debug, warn};
 use miette::{IntoDiagnostic, Result, WrapErr, diagnostic};
 use mlua::{Lua, Table};
+use regex::Regex;
 use tap::{Pipe, Tap};
 
 use luatalk::{Article, IntoAndLang, Lang, LuaTalkExt, Msg, lua, momotalk};
@@ -17,6 +21,9 @@ use crate::{
     app::state::State,
     cli::{Args, Commands, LuaInputArgs, OutputFormatArg},
 };
+
+const DEFAULT_OUTPUTNAME: &str = "article";
+const INDEX_KEY: &str = "i";
 
 pub trait Runnable {
     fn run(self) -> Result<()>;
@@ -80,8 +87,8 @@ impl From<LuaInputArgs> for LuaInput {
             })
             .flat_map(|p| {
                 [
-                    App::<state::Initial>::as_lua_path_entry_or_empty(p, "?.lua"),
-                    App::<state::Initial>::as_lua_path_entry_or_empty(p, "?/init.lua"),
+                    Self::as_lua_path_entry_or_empty(p, "?.lua"),
+                    Self::as_lua_path_entry_or_empty(p, "?/init.lua"),
                 ]
             })
             .collect::<String>();
@@ -97,6 +104,14 @@ impl From<LuaInputArgs> for LuaInput {
     }
 }
 
+impl LuaInput {
+    fn as_lua_path_entry_or_empty(dir: &Path, file: &str) -> String {
+        dir.join(file)
+            .to_str()
+            .map_or(String::new(), |s| s.to_owned() + ";")
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum OutputFormat {
     Momotalk,
@@ -105,16 +120,12 @@ enum OutputFormat {
 enum MultiPurposeWriter {
     Single(FileOrStdout),
 
-    #[allow(dead_code)]
-    Multi(PathBuf),
+    Multi(MultiPath),
 }
 
-impl<S: State> App<S> {
-    fn as_lua_path_entry_or_empty(dir: &Path, file: &str) -> String {
-        dir.join(file)
-            .to_str()
-            .map_or(String::new(), |s| s.to_owned() + ";")
-    }
+enum MultiPath {
+    Fmtstr(String),
+    Dir { path: PathBuf, filename: String },
 }
 
 impl TryFrom<Args> for App<state::Initial> {
@@ -139,25 +150,60 @@ impl TryFrom<Args> for App<state::Initial> {
                 format,
                 concat_pages,
             } => {
-                let lua_input = lua_input_args.into();
                 let format = match format {
                     OutputFormatArg::Momotalk => OutputFormat::Momotalk,
                 };
                 let output_dest = if concat_pages {
-                    debug!("Output file: {}", output.filename());
-                    output.pipe(MultiPurposeWriter::Single)
-                } else {
-                    if output.is_stdout() {
-                        return Err(diagnostic!(
-                            "Output file cannot be stdout to export article in pages."
-                        )
-                        .into());
+                    if let Some(output) = output {
+                        output
+                    } else {
+                        FileOrStdout::from_str("-").into_diagnostic()?
                     }
-                    output
-                        .filename()
-                        .pipe(PathBuf::from)
-                        .pipe(MultiPurposeWriter::Multi)
+                    .pipe(MultiPurposeWriter::Single)
+                } else {
+                    let strfmt_re =
+                        Regex::new(formatcp!(r"\{{{}(?::.*)?\}}", INDEX_KEY)).into_diagnostic()?;
+
+                    let certain_dir;
+                    let path = if let Some(output) = &output {
+                        certain_dir = false;
+                        if output.is_file() {
+                            output.filename()
+                        } else {
+                            return Err(diagnostic!(
+                                "Output file cannot be a file to export article in pages."
+                            )
+                            .into());
+                        }
+                    } else {
+                        certain_dir = true;
+                        lua_input_args.input.filename_or_default(DEFAULT_OUTPUTNAME)
+                    };
+
+                    if !certain_dir && strfmt_re.is_match(path) {
+                        debug!("Output file pattern: {path}");
+                        MultiPath::Fmtstr(path.to_owned())
+                    } else {
+                        let path = {
+                            let path_str = path;
+                            let path = PathBuf::from(path);
+                            debug!("Output dir: {path_str}");
+                            if !path.exists() {
+                                eprintln!("Creating output directory: {path_str}");
+                                fs::create_dir_all(&path).into_diagnostic()?;
+                                debug!("Output directory created");
+                            };
+                            path
+                        };
+                        let filename = lua_input_args
+                            .input
+                            .filename_or_default(DEFAULT_OUTPUTNAME)
+                            .to_owned();
+                        MultiPath::Dir { path, filename }
+                    }
+                    .pipe(MultiPurposeWriter::Multi)
                 };
+                let lua_input = lua_input_args.into();
                 Action::Export {
                     lua_input,
                     format,
@@ -171,6 +217,20 @@ impl TryFrom<Args> for App<state::Initial> {
             action,
             state: state::Initial,
         })
+    }
+}
+
+trait FilenameOrDefault {
+    fn filename_or_default<'a>(&'a self, default: &'a str) -> &'a str;
+}
+
+impl FilenameOrDefault for FileOrStdin {
+    fn filename_or_default<'a>(&'a self, default: &'a str) -> &'a str {
+        if self.is_file() {
+            self.filename()
+        } else {
+            default
+        }
     }
 }
 
@@ -255,22 +315,82 @@ impl Runnable for App<state::OfArticle> {
                         };
                         debug!("Build MomotalkExport structure success");
 
+                        debug!("Output to: {}", output_dest.filename());
                         let mut writer = output_dest.clone().into_writer().into_diagnostic()?;
-                        serde_json::to_writer_pretty(&mut writer, &momotalk_export)
-                            .into_diagnostic()?;
-
-                        writer.write_all(b"\n").into_diagnostic()?;
-                        writer.flush().into_diagnostic()
+                        Self::export_momotalk_to_writer(&momotalk_export, &mut writer)
                     }
 
-                    MultiPurposeWriter::Multi(_) => {
-                        let _: Vec<momotalk::MomotalkExport> =
+                    MultiPurposeWriter::Multi(path) => {
+                        let momotalk_exports: Vec<momotalk::MomotalkExport> =
                             self.state.article.try_into().into_diagnostic()?;
-                        todo!()
+                        let width_auto = {
+                            let size = momotalk_exports.len();
+                            let _: i32 = size
+                                .try_into()
+                                .map_err(momotalk::MomotalkExportError::TryFromInt)
+                                .into_diagnostic()?;
+                            if size == 0 {
+                                return Err(diagnostic!("No page to export").into());
+                            }
+                            size.ilog10() as usize + 1
+                        };
+                        let mut momotalk_exports = momotalk_exports.into_iter().zip(1..);
+                        match path {
+                            MultiPath::Dir { path, filename } => {
+                                momotalk_exports.try_for_each(|(momotalk_export, i)| {
+                                    let output_file =
+                                        path.join(format!("{filename}_{:width_auto$}.json", i,));
+                                    Self::export_momotalk_page_to_file(
+                                        &momotalk_export,
+                                        i,
+                                        &output_file,
+                                    )
+                                })
+                            }
+
+                            MultiPath::Fmtstr(fmtstr) => {
+                                let mut vars = HashMap::with_capacity(1);
+                                momotalk_exports.try_for_each(|(momotalk_export, i)| {
+                                    vars.insert(INDEX_KEY.to_owned(), i.to_string());
+                                    let output_path = strfmt::strfmt(fmtstr, &vars)
+                                        .into_diagnostic()
+                                        .wrap_err("Failed to format output file path string")?
+                                        .pipe(PathBuf::from);
+                                    Self::export_momotalk_page_to_file(
+                                        &momotalk_export,
+                                        i,
+                                        &output_path,
+                                    )
+                                })
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+impl App<state::OfArticle> {
+    fn export_momotalk_to_writer<W: Write>(
+        momotalk_export: &momotalk::MomotalkExport,
+        mut writer: &mut W,
+    ) -> Result<()> {
+        serde_json::to_writer_pretty(&mut writer, &momotalk_export).into_diagnostic()?;
+        writer.write_all(b"\n").into_diagnostic()?;
+        writer.flush().into_diagnostic()
+    }
+
+    fn export_momotalk_page_to_file(
+        momotalk_export: &momotalk::MomotalkExport,
+        i: usize,
+        output_path: &Path,
+    ) -> Result<()> {
+        debug!("Output page {i} to: {}", output_path.display());
+        let mut writer = fs::File::create(output_path)
+            .into_diagnostic()
+            .wrap_err_with(|| format!("Failed to create output file: {}", output_path.display()))?;
+        Self::export_momotalk_to_writer(momotalk_export, &mut writer)
     }
 }
 
