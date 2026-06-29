@@ -15,7 +15,7 @@
 //! lua.load_default_lib().unwrap();
 //!
 //! let chunk = include_str!("../assets/lua/input/example.lua");
-//! let got = lua::Article::from_chunk(chunk, &lua)
+//! let got = lua::Article::try_from_chunk(chunk, &lua)
 //!     .unwrap()
 //!     .pipe(Article::from);
 //!

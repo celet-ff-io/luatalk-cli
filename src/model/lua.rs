@@ -20,7 +20,7 @@ pub struct Article {
 }
 
 impl Article {
-    pub fn from_chunk(chunk: impl AsChunk, lua: &Lua) -> Result<Self, LuaParseError> {
+    pub fn try_from_chunk(chunk: impl AsChunk, lua: &Lua) -> Result<Self, LuaParseError> {
         lua.load(chunk)
             .eval::<Table>()
             .map_err(LuaParseError::Eval)?

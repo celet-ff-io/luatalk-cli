@@ -18,7 +18,7 @@ fn try_get_example_article() -> Result<&'static Article> {
                 Lua::new().pipe(|lua| lua.load_default_lib().into_diagnostic().map(|_| lua))?;
             let chunk = include_str!("fixtures/example.lua");
 
-            lua::Article::from_chunk(chunk, &lua)
+            lua::Article::try_from_chunk(chunk, &lua)
                 .into_diagnostic()?
                 .pipe(Article::from)
                 .pipe(Ok)
@@ -125,7 +125,7 @@ fn check_article_raw() -> Result<()> {
         let lua = Lua::new();
         let chunk = include_str!("fixtures/raw_example.lua");
 
-        lua::Article::from_chunk(chunk, &lua)
+        lua::Article::try_from_chunk(chunk, &lua)
             .into_diagnostic()?
             .pipe(Article::from)
     };
@@ -142,7 +142,7 @@ fn export_page_to_momotalk_export_json() -> Result<()> {
             let lua =
                 Lua::new().pipe(|lua| lua.load_default_lib().into_diagnostic().map(|_| lua))?;
             let chunk = include_str!("fixtures/example_Momotalk-export.lua");
-            let article = lua::Article::from_chunk(chunk, &lua)
+            let article = lua::Article::try_from_chunk(chunk, &lua)
                 .into_diagnostic()?
                 .pipe(Article::from);
             let lang = article.lang();

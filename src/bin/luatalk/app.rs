@@ -205,7 +205,7 @@ impl App<state::Initial> {
             pacakges.set(KEY_PATH, new_path).into_diagnostic()?;
         }
 
-        let article = lua::Article::from_chunk(source, lua)
+        let article = lua::Article::try_from_chunk(source, lua)
             .into_diagnostic()?
             .pipe(Article::from);
 
