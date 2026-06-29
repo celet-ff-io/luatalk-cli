@@ -35,6 +35,7 @@ pub trait InLang {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Lang {
     En,
+    JaJp,
     ZhCn,
 }
 

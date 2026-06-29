@@ -61,6 +61,9 @@ pub enum Lang {
     #[serde(rename = "en")]
     En,
 
+    #[serde(rename = "ja-JP")]
+    JaJp,
+
     #[serde(rename = "zh-CN")]
     ZhCn,
 }
@@ -69,6 +72,7 @@ impl From<model::Lang> for Lang {
     fn from(lang: model::Lang) -> Self {
         match lang {
             model::Lang::En => Lang::En,
+            model::Lang::JaJp => Lang::JaJp,
             model::Lang::ZhCn => Lang::ZhCn,
         }
     }
@@ -78,6 +82,7 @@ impl From<Lang> for model::Lang {
     fn from(lang: Lang) -> Self {
         match lang {
             Lang::En => model::Lang::En,
+            Lang::JaJp => model::Lang::JaJp,
             Lang::ZhCn => model::Lang::ZhCn,
         }
     }

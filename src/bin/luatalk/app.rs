@@ -15,7 +15,7 @@ use mlua::{Lua, Table};
 use regex::Regex;
 use tap::{Pipe, Tap};
 
-use luatalk::{Article, IntoAndLang, Lang, LuaTalkExt, Msg, lua, momotalk};
+use luatalk::{Article, InLang, IntoAndLang, LuaTalkExt, Msg, lua, momotalk};
 
 use crate::{
     app::state::State,
@@ -313,14 +313,14 @@ impl Runnable for App<state::OfArticle> {
                 }
                 match output_dest {
                     MultiPurposeWriter::Single(output_dest) => {
-                        let talk_history = self
-                            .state
-                            .article
+                        let article = self.state.article;
+                        let lang = article.lang();
+                        let talk_history = article
                             .into_pages()
                             .into_iter()
                             .flatten()
                             .collect::<Vec<Msg>>()
-                            .into_and_lang(Lang::En)
+                            .into_and_lang(lang)
                             .try_into()
                             .into_diagnostic()?;
                         let momotalk_export = momotalk::MomotalkExport {
