@@ -1,16 +1,19 @@
 --- Useful Lua module helps generate input file for luatalk-cli crate.
 --- See the crate homepage `https://github.com/celet-ff-io/luatalk-cli`.
+---
 --- @module talk
 --- @author celet-ff-io
 --- @copyright 2026-present celet-ff-io
 --- @license MIT OR Apache-2.0
---- @release 0.1.0
+--- @release 0.2.0
+--- @return Article
 
 local talk = {}
 
 -- Models
 
 --- @class Article
+--- @field lang string
 --- @field pages Page[]
 
 --- @class Page
