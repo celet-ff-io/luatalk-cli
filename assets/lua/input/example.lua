@@ -1,5 +1,5 @@
 -- Example input file.
--- For "talk", see `assets/talk.lua`.
+-- For "talk", see `assets/lib/talk.lua`.
 
 local talk = require("talk")
 
