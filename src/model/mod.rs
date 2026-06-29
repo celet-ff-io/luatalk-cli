@@ -15,12 +15,14 @@ pub struct Article {
 }
 
 impl Article {
+    #[inline]
     pub fn into_pages(self) -> Vec<Page> {
         self.pages
     }
 }
 
 impl InLang for Article {
+    #[inline]
     fn lang(&self) -> Lang {
         self.lang
     }
@@ -44,18 +46,21 @@ pub struct AndLang<T> {
 }
 
 impl InLang for Lang {
+    #[inline]
     fn lang(&self) -> Lang {
         *self
     }
 }
 
 pub trait IntoAndLang: Sized {
+    #[inline]
     fn into_and_lang(self, lang: Lang) -> AndLang<Self> {
         AndLang { value: self, lang }
     }
 }
 
 impl<T> IntoAndLang for T {
+    #[inline]
     fn into_and_lang(self, lang: Lang) -> AndLang<Self> {
         AndLang { value: self, lang }
     }
@@ -71,6 +76,7 @@ impl IntoIterator for Page {
     type Item = Msg;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.msgs.into_iter()
     }
