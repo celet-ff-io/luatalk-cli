@@ -27,6 +27,37 @@ pub struct MomotalkExport {
     pub select_list: Vec<SelectListItem>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct TalkHistoryItem {
+    #[serde(rename = "Id")]
+    pub id: i32,
+
+    #[serde(rename = "Name")]
+    pub name: String,
+
+    #[serde(rename = "Avatar")]
+    pub avatar: String,
+
+    #[serde(rename = "type")]
+    pub type_: Type,
+
+    #[serde(rename = "flag")]
+    pub flag: i32,
+
+    #[serde(rename = "content")]
+    pub content: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize_repr)]
+#[repr(i32)]
+pub enum Type {
+    Student = 0,
+    Sensei = 1,
+    Story = 2,
+    Choice = 3,
+    Message = 4,
+}
+
 type MsgList = Vec<model::Msg>;
 
 impl TryFrom<WithLang<MsgList>> for Vec<TalkHistoryItem> {
@@ -147,37 +178,6 @@ pub enum MomotalkExportError {
 
     #[error("Require text while body type is image")]
     InvaildContentType,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct TalkHistoryItem {
-    #[serde(rename = "Id")]
-    pub id: i32,
-
-    #[serde(rename = "Name")]
-    pub name: String,
-
-    #[serde(rename = "Avatar")]
-    pub avatar: String,
-
-    #[serde(rename = "type")]
-    pub type_: Type,
-
-    #[serde(rename = "flag")]
-    pub flag: i32,
-
-    #[serde(rename = "content")]
-    pub content: String,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize_repr)]
-#[repr(i32)]
-pub enum Type {
-    Student = 0,
-    Sensei = 1,
-    Story = 2,
-    Choice = 3,
-    Message = 4,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
