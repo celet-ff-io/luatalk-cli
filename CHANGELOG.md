@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Files for cargo-deny and cargo-about.
 - Quick view part in doc "Usage" section.
 
 ### Changed
