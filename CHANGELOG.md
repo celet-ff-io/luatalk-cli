@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Update some dependencies.
+
+- Downgrade the minimal supported Rust version to `1.92` (maybe smaller in future)
+
 - **Breaking:** Refactor `generate` subcommand,
   moving old ones to `generate asset`,
   keeping `generate example` as a standalone subcommand.
