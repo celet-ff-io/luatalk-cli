@@ -192,6 +192,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "clap_complete"
+version = "4.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0a7a9bfdb35811f9e59832f0f05975114d2251b415fb534108e6f34060fd772"
+dependencies = [
+ "clap",
+]
+
+[[package]]
 name = "clap_derive"
 version = "4.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -459,11 +468,12 @@ dependencies = [
 
 [[package]]
 name = "luatalk-cli"
-version = "0.2.2"
+version = "0.3.0-alpha"
 dependencies = [
  "clap",
  "clap-stdin",
  "clap-verbosity-flag",
+ "clap_complete",
  "const_format",
  "env_logger",
  "getset",
