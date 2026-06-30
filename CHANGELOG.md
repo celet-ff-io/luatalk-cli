@@ -16,7 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Extract "Usage" section from `README.md` to `USAGE.md`.
-- Move `./README.md` to `./docs/README.md` and symlink `./README.md` to it.
 
 ## [0.2.0] - 2026-06/29
 

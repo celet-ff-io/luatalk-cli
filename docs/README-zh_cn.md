@@ -2,7 +2,7 @@
 
 用 Lua 脚本构建类 MMT 文章。
 
-| [English](./README.md)|简体中文|
+| [English](../README.md)|简体中文|
 |---|---|
 
 ## TODO

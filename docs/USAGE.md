@@ -1,6 +1,6 @@
 # Usage
 
-|[README](./README.md)|USAGE|
+|[README](../README.md)|USAGE|
 |---|---|
 
 See `README` for more information,
