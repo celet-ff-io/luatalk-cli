@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** Refactor `generate` subcommand,
+  moving old ones to `generate asset`,
+  keeping `generate example` as a standalone subcommand.
+
+- **Breaking:** Asset arguments' names has been changed
+  for `generate asset` (`generate` in previous versions).
+
 ## [0.2.2] - 2026-06/30
 
 ### Fixed

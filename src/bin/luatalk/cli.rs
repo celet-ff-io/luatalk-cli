@@ -34,9 +34,11 @@ pub struct Args {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Generate useful assets file hard-coded in the binary.
-    /// You can also obtain them at source.
-    Generate { asset: AssetArg },
+    /// Generate useful files hard-coded in the binary.
+    Generate {
+        #[command(subcommand)]
+        command: GenerateCommands,
+    },
 
     /// Show LuaTalk article in `luatalk::Article` structure string.
     Show {
@@ -71,15 +73,25 @@ pub enum Commands {
     },
 }
 
+#[derive(Debug, Subcommand)]
+pub enum GenerateCommands {
+    /// Generate example input Lua file
+    Example,
+
+    /// Generate useful assets file.
+    /// You may also obtain them from source.
+    Asset { asset: AssetArg },
+}
+
 #[derive(Debug, Clone, ValueEnum)]
 pub enum AssetArg {
     /// Example input Lua file
-    #[value(name = "example")]
-    Example,
+    #[value(name = "lua/input/example.lua")]
+    LuaInputExample,
 
     /// `talk.lua` module enabled by the flag `--lib-default`
-    #[value(name = "lib/talk.lua")]
-    LibTalk,
+    #[value(name = "lua/lib/talk.lua")]
+    LuaLibTalk,
 }
 
 #[derive(Debug, clap::Args)]

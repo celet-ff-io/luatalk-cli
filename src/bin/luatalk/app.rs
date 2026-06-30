@@ -19,7 +19,7 @@ use luatalk::{Article, InLang, IntoAndLang, LuaTalkExt, Msg, lua, momotalk};
 
 use crate::{
     app::state::State,
-    cli::{Args, AssetArg, Commands, LuaInputArgs, OutputFormatArg},
+    cli::{Args, AssetArg, Commands, GenerateCommands, LuaInputArgs, OutputFormatArg},
 };
 
 const DEFAULT_OUTPUTNAME: &str = "article";
@@ -40,7 +40,7 @@ pub struct App<S: State> {
 #[derive(Debug, Clone)]
 enum Action {
     Generate {
-        asset: Asset,
+        action: GenerateAction,
     },
 
     Show {
@@ -55,19 +55,25 @@ enum Action {
     },
 }
 
-impl From<AssetArg> for Asset {
-    fn from(value: AssetArg) -> Self {
-        match value {
-            AssetArg::Example => Self::Example,
-            AssetArg::LibTalk => Self::LibTalk,
-        }
-    }
+#[derive(Debug, Clone)]
+enum GenerateAction {
+    Example,
+    Asset { asset: Asset },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum Asset {
-    Example,
-    LibTalk,
+    LuaInputExample,
+    LuaLibTalk,
+}
+
+impl From<AssetArg> for Asset {
+    fn from(value: AssetArg) -> Self {
+        match value {
+            AssetArg::LuaInputExample => Self::LuaInputExample,
+            AssetArg::LuaLibTalk => Self::LuaLibTalk,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -163,8 +169,13 @@ impl TryFrom<Args> for App<state::Initial> {
             .init();
 
         let action = match args.command {
-            Commands::Generate { asset } => Action::Generate {
-                asset: asset.into(),
+            Commands::Generate { command } => Action::Generate {
+                action: match command {
+                    GenerateCommands::Example => GenerateAction::Example,
+                    GenerateCommands::Asset { asset } => GenerateAction::Asset {
+                        asset: asset.into(),
+                    },
+                },
             },
 
             Commands::Show { lua_input_args } => Action::Show {
@@ -245,7 +256,6 @@ trait FilenameOrDefault {
 }
 
 impl FilenameOrDefault for FileOrStdin {
-    #[inline]
     fn filename_or_default(&self, default: &str) -> Result<String> {
         if self.is_stdin() {
             default.to_owned()
@@ -269,18 +279,15 @@ impl FilenameOrDefault for FileOrStdin {
 impl Runnable for App<state::Initial> {
     fn run(self) -> Result<()> {
         match self.action.pipe_ref(Rc::clone).as_ref() {
-            Action::Generate { asset } => match asset {
-                Asset::Example => {
-                    let example = include_str!("../../../assets/lua/input/example.lua");
-                    println!("{example}");
-                    Ok(())
-                }
+            Action::Generate { action } => match action {
+                GenerateAction::Example => Self::print_example(),
 
-                Asset::LibTalk => {
-                    let lib_talk = include_str!("../../../assets/lua/lib/talk.lua");
-                    println!("{lib_talk}");
-                    Ok(())
-                }
+                GenerateAction::Asset { asset } => match asset {
+                    Asset::LuaInputExample => Self::print_example(),
+                    Asset::LuaLibTalk => {
+                        Self::print_asset_str(include_str!("../../../assets/lua/lib/talk.lua"))
+                    }
+                },
             },
 
             Action::Show { lua_input, .. } => self.lua_input(lua_input)?.run(),
@@ -289,6 +296,7 @@ impl Runnable for App<state::Initial> {
         }
     }
 }
+
 impl App<state::Initial> {
     fn lua_input(self, lua_input: &LuaInput) -> Result<App<state::OfArticle>> {
         let LuaInput {
@@ -322,6 +330,16 @@ impl App<state::Initial> {
             action: self.action,
         }
         .pipe(Ok)
+    }
+
+    fn print_example() -> Result<()> {
+        Self::print_asset_str(include_str!("../../../assets/lua/input/example.lua"))
+    }
+
+    #[inline]
+    fn print_asset_str(asset_str: &str) -> Result<()> {
+        println!("{asset_str}");
+        Ok(())
     }
 }
 
