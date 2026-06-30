@@ -1,11 +1,11 @@
 [package]
 name = "luatalk-cli"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["celet-ff-io"]
 edition = "2024"
 rust-version = "1.95"
 description = "Build article from Lua file."
-readme = "docs/README.md"
+readme = "README.md"
 homepage = "https://github.com/celet-ff-io/luatalk-cli"
 repository = "https://github.com/celet-ff-io/luatalk-cli"
 license = "MIT OR Apache-2.0"

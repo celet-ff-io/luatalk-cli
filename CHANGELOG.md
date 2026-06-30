@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-06/30
+
+### Fixed
+
+- Wrong readme path in `Cargo.toml`.
+
+## [0.2.1] - 2026-06/30
+
 ### Added
 
 - Files for cargo-deny and cargo-about.
