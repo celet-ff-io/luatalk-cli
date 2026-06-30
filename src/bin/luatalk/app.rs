@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     fs,
-    io::Write,
+    io::{self, Write},
     path::{Path, PathBuf},
     rc::Rc,
     str::FromStr,
@@ -19,7 +19,7 @@ use luatalk::{Article, InLang, IntoAndLang, LuaTalkExt, Msg, lua, momotalk};
 
 use crate::{
     app::state::State,
-    cli::{Args, AssetArg, Commands, GenerateCommands, LuaInputArgs, OutputFormatArg},
+    cli::{self, Args, AssetArg, Commands, GenerateCommands, LuaInputArgs, OutputFormatArg},
 };
 
 const DEFAULT_OUTPUTNAME: &str = "article";
@@ -58,6 +58,7 @@ enum Action {
 #[derive(Debug, Clone)]
 enum GenerateAction {
     Example,
+    Completion { shell: clap_complete::Shell },
     Asset { asset: Asset },
 }
 
@@ -172,6 +173,7 @@ impl TryFrom<Args> for App<state::Initial> {
             Commands::Generate { command } => Action::Generate {
                 action: match command {
                     GenerateCommands::Example => GenerateAction::Example,
+                    GenerateCommands::Completion { shell } => GenerateAction::Completion { shell },
                     GenerateCommands::Asset { asset } => GenerateAction::Asset {
                         asset: asset.into(),
                     },
@@ -281,6 +283,11 @@ impl Runnable for App<state::Initial> {
         match self.action.pipe_ref(Rc::clone).as_ref() {
             Action::Generate { action } => match action {
                 GenerateAction::Example => Self::print_example(),
+
+                GenerateAction::Completion { shell } => {
+                    cli::generate_completion(*shell, &mut io::stdout());
+                    Ok(())
+                }
 
                 GenerateAction::Asset { asset } => match asset {
                     Asset::LuaInputExample => Self::print_example(),

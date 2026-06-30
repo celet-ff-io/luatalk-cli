@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `generate completion` subcommand to generate shell completion.
+
 ### Changed
 
 - **Breaking:** Refactor `generate` subcommand,

@@ -1,12 +1,13 @@
 use std::path::PathBuf;
 
 use clap::{
-    ArgAction, Parser, Subcommand, ValueEnum,
+    ArgAction, CommandFactory, Parser, Subcommand, ValueEnum,
     builder::{
         Styles,
         styling::{AnsiColor, Effects},
     },
 };
+use clap_complete::{Shell, generate};
 use clap_stdin::{FileOrStdin, FileOrStdout};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 
@@ -34,7 +35,7 @@ pub struct Args {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Generate useful files hard-coded in the binary.
+    /// Output useful files at runtime or hard-coded in the binary.
     Generate {
         #[command(subcommand)]
         command: GenerateCommands,
@@ -78,6 +79,11 @@ pub enum GenerateCommands {
     /// Generate example input Lua file
     Example,
 
+    /// Generate shell completion script for the specified shell.
+    #[command(after_help = "e.g. `source <(luatalk generate completion bash)` \
+            for bash users to load the completion script in current session.")]
+    Completion { shell: Shell },
+
     /// Generate useful assets file.
     /// You may also obtain them from source.
     Asset { asset: AssetArg },
@@ -113,4 +119,9 @@ pub struct LuaInputArgs {
 pub enum OutputFormatArg {
     /// Momotalk export JSON format for 'https://github.com/U1805/momotalk'
     Momotalk,
+}
+
+pub fn generate_completion(shell: Shell, buf: &mut dyn std::io::Write) {
+    let mut cmd = Args::command();
+    generate(shell, &mut cmd, "luatalk", buf);
 }
