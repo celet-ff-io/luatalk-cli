@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `--no-default-lib` option to disable default Lua library files.
 
+### Changed
+
+- **Breaking:** `luatalk::lua` has been refactored to `luatalk::dto`.
+
 ### Removed
 
 - **Breaking:** `--lib-default`. Use `--no-default-lib` instead.

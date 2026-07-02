@@ -6,7 +6,7 @@
 //!
 //! ```
 //! use std::sync::Arc;
-//! use luatalk::{Article, Body, ImageValue, Lang, LuaTalkExt, Msg, Page, Profile, Role, TextValue, lua};
+//! use luatalk::{Article, Body, ImageValue, Lang, LuaTalkExt, Msg, Page, Profile, Role, TextValue, dto};
 //! use miette::{IntoDiagnostic, Result, WrapErr};
 //! use mlua::Lua;
 //! use tap::Pipe;
@@ -15,7 +15,7 @@
 //! lua.load_default_lib().unwrap();
 //!
 //! let chunk = include_str!("../assets/lua/input/example.lua");
-//! let got = lua::Article::try_from_chunk(chunk, &lua)
+//! let got = dto::Article::try_from_chunk(chunk, &lua)
 //!     .unwrap()
 //!     .pipe(Article::from);
 //!
@@ -114,6 +114,6 @@ pub use error::LuaParseError;
 pub use model::{AndLang, InLang, IntoAndLang, Lang};
 pub use model::{Article, Body, Msg, Page, Profile};
 pub use model::{ImageValue, Role, TextValue};
-pub use model::{lua, momotalk};
+pub use model::{dto, momotalk};
 
 pub use talk::{LuaTalkExt, LuaTalkLibError};

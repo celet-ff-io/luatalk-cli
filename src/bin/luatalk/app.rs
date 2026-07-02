@@ -15,7 +15,7 @@ use mlua::{Lua, Table};
 use regex::Regex;
 use tap::{Pipe, Tap};
 
-use luatalk::{Article, InLang, IntoAndLang, LuaTalkExt, Msg, lua, momotalk};
+use luatalk::{Article, InLang, IntoAndLang, LuaTalkExt, Msg, dto, momotalk};
 
 use crate::{
     app::state::State,
@@ -326,7 +326,7 @@ impl App<state::Initial> {
             pacakges.set(KEY_PATH, new_path).into_diagnostic()?;
         }
 
-        let article = lua::Article::try_from_chunk(source, lua)
+        let article = dto::Article::try_from_chunk(source, lua)
             .into_diagnostic()?
             .pipe(Article::from);
 
