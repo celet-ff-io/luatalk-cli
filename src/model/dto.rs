@@ -8,12 +8,12 @@
 use std::sync::Arc;
 
 use mlua::{AsChunk, FromLua, Lua, LuaSerdeExt, Table, Value};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tap::Pipe;
 
 use crate::{error::LuaParseError, model};
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Article {
     pub lang: Lang,
     pub pages: Vec<Page>,
@@ -56,7 +56,7 @@ impl From<Article> for model::Article {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Lang {
     #[serde(rename = "en")]
     En,
@@ -88,7 +88,7 @@ impl From<Lang> for model::Lang {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Page {
     pub msgs: Vec<Msg>,
 }
@@ -111,7 +111,7 @@ impl From<Page> for model::Page {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Msg {
     pub role: Role,
     pub body: Body,
@@ -148,7 +148,7 @@ impl From<Msg> for model::Msg {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Role {
     Guest,
@@ -182,7 +182,7 @@ impl From<Role> for model::Role {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "value", rename_all = "snake_case")]
 pub enum Body {
     Text(TextValue),
@@ -207,7 +207,7 @@ impl From<Body> for model::Body {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TextValue {
     pub content: String,
 }
@@ -226,7 +226,7 @@ impl From<TextValue> for model::TextValue {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ImageValue {
     pub url: String,
 }
@@ -245,7 +245,7 @@ impl From<ImageValue> for model::ImageValue {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Profile {
     pub name: String,
     pub avatar: ImageValue,
