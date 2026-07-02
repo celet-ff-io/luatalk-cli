@@ -2,7 +2,7 @@
 
 用 Lua 脚本构建类 MMT 文章。
 
-| [English](../README.md)|简体中文|
+|[English](../README.md)|简体中文|
 |---|---|
 
 ## TODO
@@ -21,7 +21,8 @@
 ## 下载安装
 
 - 从 Release 下载适合你平台的预编译二进制文件（如果有的话）。
-- 使用 `cargo install luatalk-cli` 一键从 [crates.io](https://crates.io/crates/luatalk-cli) 获取源代码，构建并安装。
+- 使用 `cargo install luatalk-cli`
+  一键从 [crates.io](https://crates.io/crates/luatalk-cli) 获取源代码，构建并安装。
 - 下载源代码并使用 `cargo run` 尝试，或使用 `cargo build --release` 构建 release 二进制。
 
 ## 目标

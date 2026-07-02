@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `--no-default-lib` option to disable default Lua library files.
+
+### Removed
+
+- **Breaking:** `--lib-default`. Use `--no-default-lib` instead.
+
 ## [0.3.0-alpha.1] - 2026-07-01
 
 ### Changed

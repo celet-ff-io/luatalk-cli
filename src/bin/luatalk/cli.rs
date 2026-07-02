@@ -95,7 +95,7 @@ pub enum AssetArg {
     #[value(name = "lua/input/example.lua")]
     LuaInputExample,
 
-    /// `talk.lua` module enabled by the flag `--lib-default`
+    /// `talk.lua` module in default lib of this program
     #[value(name = "lua/lib/talk.lua")]
     LuaLibTalk,
 }
@@ -105,11 +105,11 @@ pub struct LuaInputArgs {
     /// Input Lua file. '-' for stdin.
     pub input: FileOrStdin,
 
-    /// Set this flag to load the `talk.lua` module hard-coded in program.
+    /// Set this flag to false to disable loading the `talk.lua` module.
     #[arg(long)]
-    pub lib_default: bool,
+    pub no_default_lib: bool,
 
-    /// Additional search directories for Lua modules. Can be specified multiple times.
+    /// Manually set additional Lua search paths. Can be specified multiple times.
     #[arg(long = "lib", action = ArgAction::Append)]
     pub libs: Vec<PathBuf>,
 }

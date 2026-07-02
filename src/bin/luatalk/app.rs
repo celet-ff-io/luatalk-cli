@@ -90,7 +90,7 @@ impl From<LuaInputArgs> for LuaInput {
     fn from(value: LuaInputArgs) -> Self {
         let LuaInputArgs {
             input,
-            lib_default,
+            no_default_lib,
             libs,
         } = value;
 
@@ -100,7 +100,7 @@ impl From<LuaInputArgs> for LuaInput {
             .wrap_err("Input file not found")
             .unwrap_or_default();
 
-        let enable_lib_default = lib_default;
+        let enable_lib_default = !no_default_lib;
 
         let path_addtion = libs
             .iter()
