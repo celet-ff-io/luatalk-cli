@@ -7,9 +7,9 @@ use tap::Pipe;
 
 use crate::{
     app::{App, Runnable},
-    cli::Args,
+    cli::AppArgs,
 };
 
 fn main() -> Result<()> {
-    Args::parse().pipe(App::try_from)?.run()
+    AppArgs::parse().pipe(App::try_from)?.run()
 }

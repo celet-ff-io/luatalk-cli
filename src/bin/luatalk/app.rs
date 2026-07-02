@@ -19,7 +19,7 @@ use luatalk::{Article, InLang, IntoAndLang, LuaTalkExt, Msg, dto, momotalk};
 
 use crate::{
     app::state::State,
-    cli::{self, Args, AssetArg, Commands, GenerateCommands, LuaInputArgs, OutputFormatArg},
+    cli::{self, AppArgs, AppCommands, AssetArg, GenerateCommands, LuaInputArgs, OutputFormatArg},
 };
 
 const DEFAULT_OUTPUTNAME: &str = "article";
@@ -55,11 +55,122 @@ enum Action {
     },
 }
 
+impl TryFrom<AppCommands> for Action {
+    type Error = miette::Report;
+
+    fn try_from(value: AppCommands) -> Result<Self, Self::Error> {
+        match value {
+            AppCommands::Generate { command } => Ok(Self::Generate {
+                action: command.into(),
+            }),
+
+            AppCommands::Show { lua_input_args } => Ok(Self::Show {
+                lua_input: lua_input_args.into(),
+                output_dest: FileOrStdout::from_str("-").into_diagnostic()?,
+            }),
+
+            AppCommands::Export {
+                lua_input_args,
+                output,
+                format,
+                concat_pages,
+            } => {
+                let format = format.into();
+                let output_dest = if concat_pages {
+                    if let Some(output) = output {
+                        output
+                    } else {
+                        FileOrStdout::from_str("-").into_diagnostic()?
+                    }
+                    .pipe(MultiPurposeWriter::Single)
+                } else {
+                    let strfmt_re =
+                        Regex::new(formatcp!(r"\{{{}(?::.*)?\}}", INDEX_KEY)).into_diagnostic()?;
+
+                    let certain_dir;
+                    let path = if let Some(output) = &output {
+                        certain_dir = false;
+                        if output.is_file() {
+                            output.filename()
+                        } else {
+                            return Err(diagnostic!(
+                                "Output file cannot be a file to export article in pages."
+                            )
+                            .into());
+                        }
+                        .to_owned()
+                    } else {
+                        certain_dir = true;
+                        lua_input_args
+                            .input
+                            .filename_or_default(DEFAULT_OUTPUTNAME)?
+                    };
+
+                    if !certain_dir && strfmt_re.is_match(&path) {
+                        debug!("Output file pattern: {path}");
+                        MultiPath::Fmtstr(path.to_owned())
+                    } else {
+                        let path = path.tap(|p| debug!("Output dir: {p}")).into();
+                        let filename = lua_input_args
+                            .input
+                            .filename_or_default(DEFAULT_OUTPUTNAME)?;
+                        MultiPath::Dir { path, filename }
+                    }
+                    .pipe(MultiPurposeWriter::Multi)
+                };
+                let lua_input = lua_input_args.into();
+                Ok(Self::Export {
+                    lua_input,
+                    format,
+                    output_dest,
+                })
+            }
+        }
+    }
+}
+
+trait FileOrStdinExt {
+    fn filename_or_default(&self, default: &str) -> Result<String>;
+}
+
+impl FileOrStdinExt for FileOrStdin {
+    fn filename_or_default(&self, default: &str) -> Result<String> {
+        if self.is_stdin() {
+            default.to_owned()
+        } else {
+            self.filename()
+                .pipe(Path::new)
+                .file_stem()
+                .ok_or_else(|| {
+                    diagnostic!(
+                        "Input file path does not have a valid file name: {}",
+                        self.filename()
+                    )
+                })?
+                .to_string_lossy()
+                .into_owned()
+        }
+        .pipe(Ok)
+    }
+}
+
 #[derive(Debug, Clone)]
 enum GenerateAction {
     Example,
     Completion { shell: clap_complete::Shell },
     Asset { asset: Asset },
+}
+
+impl From<GenerateCommands> for GenerateAction {
+    fn from(value: GenerateCommands) -> Self {
+        match value {
+            GenerateCommands::Example => Self::Example,
+            GenerateCommands::Completion { shell } => Self::Completion { shell },
+            GenerateCommands::Asset { asset } => Self::Asset {
+                asset: asset.into(),
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -146,6 +257,14 @@ enum OutputFormat {
     Momotalk,
 }
 
+impl From<OutputFormatArg> for OutputFormat {
+    fn from(value: OutputFormatArg) -> Self {
+        match value {
+            OutputFormatArg::Momotalk => Self::Momotalk,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 enum MultiPurposeWriter {
     Single(FileOrStdout),
@@ -159,122 +278,20 @@ enum MultiPath {
     Dir { path: PathBuf, filename: String },
 }
 
-impl TryFrom<Args> for App<state::Initial> {
+impl TryFrom<AppArgs> for App<state::Initial> {
     type Error = miette::Report;
 
-    fn try_from(value: Args) -> Result<Self, Self::Error> {
+    fn try_from(value: AppArgs) -> Result<Self, Self::Error> {
         let args = value;
 
         env_logger::Builder::new()
             .filter_level(args.verbose.log_level_filter())
             .init();
 
-        let action = match args.command {
-            Commands::Generate { command } => Action::Generate {
-                action: match command {
-                    GenerateCommands::Example => GenerateAction::Example,
-                    GenerateCommands::Completion { shell } => GenerateAction::Completion { shell },
-                    GenerateCommands::Asset { asset } => GenerateAction::Asset {
-                        asset: asset.into(),
-                    },
-                },
-            },
-
-            Commands::Show { lua_input_args } => Action::Show {
-                lua_input: lua_input_args.into(),
-                output_dest: FileOrStdout::from_str("-").into_diagnostic()?,
-            },
-
-            Commands::Export {
-                lua_input_args,
-                output,
-                format,
-                concat_pages,
-            } => {
-                let format = match format {
-                    OutputFormatArg::Momotalk => OutputFormat::Momotalk,
-                };
-                let output_dest = if concat_pages {
-                    if let Some(output) = output {
-                        output
-                    } else {
-                        FileOrStdout::from_str("-").into_diagnostic()?
-                    }
-                    .pipe(MultiPurposeWriter::Single)
-                } else {
-                    let strfmt_re =
-                        Regex::new(formatcp!(r"\{{{}(?::.*)?\}}", INDEX_KEY)).into_diagnostic()?;
-
-                    let certain_dir;
-                    let path = if let Some(output) = &output {
-                        certain_dir = false;
-                        if output.is_file() {
-                            output.filename()
-                        } else {
-                            return Err(diagnostic!(
-                                "Output file cannot be a file to export article in pages."
-                            )
-                            .into());
-                        }
-                        .to_owned()
-                    } else {
-                        certain_dir = true;
-                        lua_input_args
-                            .input
-                            .filename_or_default(DEFAULT_OUTPUTNAME)?
-                    };
-
-                    if !certain_dir && strfmt_re.is_match(&path) {
-                        debug!("Output file pattern: {path}");
-                        MultiPath::Fmtstr(path.to_owned())
-                    } else {
-                        let path = path.tap(|p| debug!("Output dir: {p}")).into();
-                        let filename = lua_input_args
-                            .input
-                            .filename_or_default(DEFAULT_OUTPUTNAME)?;
-                        MultiPath::Dir { path, filename }
-                    }
-                    .pipe(MultiPurposeWriter::Multi)
-                };
-                let lua_input = lua_input_args.into();
-                Action::Export {
-                    lua_input,
-                    format,
-                    output_dest,
-                }
-            }
-        }
-        .pipe(Rc::new);
-
         Ok(Self {
-            action,
+            action: args.command.pipe(Action::try_from)?.pipe(Rc::new),
             state: state::Initial,
         })
-    }
-}
-
-trait FilenameOrDefault {
-    fn filename_or_default(&self, default: &str) -> Result<String>;
-}
-
-impl FilenameOrDefault for FileOrStdin {
-    fn filename_or_default(&self, default: &str) -> Result<String> {
-        if self.is_stdin() {
-            default.to_owned()
-        } else {
-            self.filename()
-                .pipe(Path::new)
-                .file_stem()
-                .ok_or_else(|| {
-                    diagnostic!(
-                        "Input file path does not have a valid file name: {}",
-                        self.filename()
-                    )
-                })?
-                .to_string_lossy()
-                .into_owned()
-        }
-        .pipe(Ok)
     }
 }
 

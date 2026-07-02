@@ -25,16 +25,16 @@ use clap_verbosity_flag::{InfoLevel, Verbosity};
         or the repository for more information.
 "
 )]
-pub struct Args {
+pub struct AppArgs {
     #[command(flatten)]
     pub verbose: Verbosity<InfoLevel>,
 
     #[command(subcommand)]
-    pub command: Commands,
+    pub command: AppCommands,
 }
 
 #[derive(Debug, Subcommand)]
-pub enum Commands {
+pub enum AppCommands {
     /// Output useful files at runtime or hard-coded in the binary.
     Generate {
         #[command(subcommand)]
@@ -122,6 +122,6 @@ pub enum OutputFormatArg {
 }
 
 pub fn generate_completion(shell: Shell, buf: &mut dyn std::io::Write) {
-    let mut cmd = Args::command();
+    let mut cmd = AppArgs::command();
     generate(shell, &mut cmd, "luatalk", buf);
 }
