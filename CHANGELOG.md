@@ -9,11 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- `generate completion` subcommand to generate shell completion.
+## [0.3.0-alpha.1] - 2026-07-01
 
 ### Changed
+
+- `generate completion` subcommand to generate shell completion.
 
 - Update some dependencies.
 
@@ -26,13 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Breaking:** Asset arguments' names has been changed
   for `generate asset` (`generate` in previous versions).
 
-## [0.2.2] - 2026-06/30
+## [0.2.2] - 2026-06-30
 
 ### Fixed
 
 - Wrong readme path in `Cargo.toml`.
 
-## [0.2.1] - 2026-06/30
+## [0.2.1] - 2026-06-30
 
 ### Added
 
@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Extract "Usage" section from `README.md` to `USAGE.md`.
 
-## [0.2.0] - 2026-06/29
+## [0.2.0] - 2026-06-29
 
 ### Added
 
