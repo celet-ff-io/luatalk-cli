@@ -15,6 +15,9 @@ clap = { version = "4.6.1", features = ["derive"] }
 clap-stdin = "0.8.1"
 clap-verbosity-flag = "3.0.4"
 clap_complete = "4.6.6"
+config = { version = "0.15.25", default-features = false, features = [
+  "convert-case",
+] }
 const_format = "0.2.36"
 env_logger = "0.11.11"
 getset = "0.1.7"

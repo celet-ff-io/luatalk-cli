@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add configuration from environment variables for advanced settings.
 - `--no-default-lib` option to disable default Lua library files.
 - Derive `Serialize` for structures in `luatalk::dto`.
 

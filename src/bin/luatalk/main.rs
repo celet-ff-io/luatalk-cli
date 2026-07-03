@@ -1,5 +1,6 @@
 mod app;
 mod cli;
+mod conf;
 
 use clap::Parser;
 use miette::Result;
