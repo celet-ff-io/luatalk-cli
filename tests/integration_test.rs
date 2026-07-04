@@ -1,7 +1,7 @@
 use std::sync::{Arc, OnceLock};
 
 use luatalk::{
-    Article, Body, ImageValue, InLang, IntoAndLang, Lang, LuaTalkExt, Msg, Page, Profile, Role,
+    Article, Body, ImageValue, InLang, IntoAndLang, Lang, LuaExt, Msg, Page, Profile, Role,
     TextValue, dto, momotalk,
 };
 use miette::{IntoDiagnostic, Result, diagnostic};

@@ -1,7 +1,5 @@
-use std::path::PathBuf;
-
 use clap::{
-    ArgAction, CommandFactory, Parser, Subcommand, ValueEnum,
+    CommandFactory, Parser, Subcommand, ValueEnum,
     builder::{
         Styles,
         styling::{AnsiColor, Effects},
@@ -30,98 +28,131 @@ pub struct AppArgs {
     pub verbose: Verbosity<InfoLevel>,
 
     #[command(subcommand)]
-    pub command: AppCommands,
+    pub command: AppCommand,
 }
 
-#[derive(Debug, Subcommand)]
-pub enum AppCommands {
+#[derive(Debug, Clone, Subcommand)]
+pub enum AppCommand {
     /// Output useful files at runtime or hard-coded in the binary.
     Generate {
         #[command(subcommand)]
-        command: GenerateCommands,
+        command: generate::Command,
     },
 
-    /// Show LuaTalk article in `luatalk::Article` structure string.
-    Show {
-        #[command(flatten)]
-        lua_input_args: LuaInputArgs,
-    },
-
-    /// Export LuaTalk article.
-    Export {
-        #[command(flatten)]
-        lua_input_args: LuaInputArgs,
-
-        /// Output format.
-        #[arg(short, long)]
-        format: OutputFormatArg,
+    /// Process LuaTalk article input to something.
+    Do {
+        /// Input file. `-` for stdin.
+        input: FileOrStdin,
 
         /// Concatenate all pages into a single page.
-        #[arg(long, default_value_t = false)]
+        #[arg(short, long)]
         concat_pages: bool,
 
-        /// Ouptut. Defaults to `None`.
-        ///
-        /// For one file: a file path, or `-` for stdout.
-        /// `None` stands for stdout.
-        ///
-        /// For multiple files: a directory path,
-        /// or a format string with placeholders for page index starts from 1.
-        /// e.g. `article_{i}.json`.
-        /// `None` stands for directory named after stem portion of input file name.
+        /// Input file format.
+        /// Defaults to be inferred from file extension;
+        /// for stdin, defaults to `json`.
         #[arg(short, long)]
-        output: Option<FileOrStdout>,
+        format: Option<do_::InputFormatArg>,
+
+        #[command(subcommand)]
+        output_commands: do_::OutputCommand,
     },
 }
 
-#[derive(Debug, Subcommand)]
-pub enum GenerateCommands {
-    /// Generate example input Lua file
-    Example,
+pub mod generate {
+    use super::*;
 
-    /// Generate shell completion script for the specified shell.
-    #[command(after_help = "e.g. `source <(luatalk generate completion bash)` \
+    #[derive(Debug, Clone, Subcommand)]
+    pub enum Command {
+        /// Generate example input Lua file
+        Example,
+
+        /// Generate shell completion script for the specified shell.
+        #[command(after_help = "e.g. `source <(luatalk generate completion bash)` \
             for bash users to load the completion script in current session.")]
-    Completion { shell: Shell },
+        Completion { shell: Shell },
 
-    /// Generate useful assets file.
-    /// You may also obtain them from source.
-    Asset { asset: AssetArg },
+        /// Generate useful assets file.
+        /// You may also obtain them from source.
+        Asset { asset: AssetArg },
+    }
+
+    #[derive(Debug, Clone, ValueEnum)]
+    pub enum AssetArg {
+        /// Example input Lua file
+        #[value(name = "lua/input/example.lua")]
+        LuaInputExample,
+
+        /// `talk.lua` module in default lib of this program
+        #[value(name = "lua/lib/talk.lua")]
+        LuaLibTalk,
+    }
+
+    pub fn completion(shell: Shell, buf: &mut dyn std::io::Write) {
+        let mut cmd = AppArgs::command();
+        generate(shell, &mut cmd, "luatalk", buf);
+    }
 }
 
-#[derive(Debug, Clone, ValueEnum)]
-pub enum AssetArg {
-    /// Example input Lua file
-    #[value(name = "lua/input/example.lua")]
-    LuaInputExample,
+pub mod do_ {
+    use super::*;
 
-    /// `talk.lua` module in default lib of this program
-    #[value(name = "lua/lib/talk.lua")]
-    LuaLibTalk,
-}
+    #[derive(Debug, Clone, ValueEnum)]
+    #[value(rename_all = "lower")]
+    pub enum InputFormatArg {
+        /// Lua file returns LuaTalk Article
+        Lua,
 
-#[derive(Debug, clap::Args)]
-pub struct LuaInputArgs {
-    /// Input Lua file. '-' for stdin.
-    pub input: FileOrStdin,
+        /// JSON file of LuaTalk Article
+        Json,
+    }
 
-    /// Set this flag to false to disable loading the `talk.lua` module.
-    #[arg(long)]
-    pub no_default_lib: bool,
+    #[derive(Debug, Clone, Subcommand)]
+    pub enum OutputCommand {
+        /// Show LuaTalk article in `luatalk::Article` structure string.
+        Show {
+            /// Ouptut. Defaults to `stdout`.
+            #[arg(short, long, default_value = "-")]
+            output: FileOrStdout,
+        },
 
-    /// Manually set additional Lua search paths. Can be specified multiple times.
-    #[arg(long = "lib", action = ArgAction::Append)]
-    pub libs: Vec<PathBuf>,
-}
+        Json {
+            /// Ouptut. Defaults to `stdout`.
+            #[arg(short, long, default_value = "-")]
+            output: FileOrStdout,
+        },
 
-#[derive(Debug, Clone, ValueEnum)]
-#[value(rename_all = "kebab-case")]
-pub enum OutputFormatArg {
-    /// Momotalk export JSON format for 'https://github.com/U1805/momotalk'
-    Momotalk,
-}
+        /// Momotalk export JSON format for 'https://github.com/U1805/momotalk'
+        Momotalk {
+            /// Ouptut. Defaults to `None`.
+            ///
+            /// For one file: a file path, or `-` for stdout.
+            /// `None` stands for stdout.
+            ///
+            /// For multiple files: a directory path,
+            /// or a format string with placeholders for page index starts from 1.
+            /// e.g. `article_{i}.json`.
+            /// `None` stands for directory named after stem portion of input file name.
+            #[arg(short, long)]
+            output: Option<FileOrStdout>,
 
-pub fn generate_completion(shell: Shell, buf: &mut dyn std::io::Write) {
-    let mut cmd = AppArgs::command();
-    generate(shell, &mut cmd, "luatalk", buf);
+            /// Output plurality.
+            #[arg(long, default_value = "auto")]
+            pl: OutputPluralityArg,
+        },
+    }
+
+    #[derive(Debug, Clone, Default, ValueEnum)]
+    pub enum OutputPluralityArg {
+        /// Use `single` for article of only one page,
+        /// `multi` for article of multiple pages.
+        #[default]
+        Auto,
+
+        /// Output a single file.
+        Single,
+
+        /// Output multiple files, one for each page.
+        Multi,
+    }
 }

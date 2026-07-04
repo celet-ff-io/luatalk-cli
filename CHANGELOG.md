@@ -11,17 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Subcommand `do` for general input processing.
+- `--format` option for `do` to specify input format.
+- Short flag `-c` stands for `--concat-pages`.
+- Output subcommands for different formats with JSON support.
 - Add configuration from environment variables for advanced settings.
-- `--no-default-lib` option to disable default Lua library files.
 - Derive `Serialize` for structures in `luatalk::dto`.
 
 ### Changed
 
+- **Breaking:** `luatalk::LuaTalkExt` has been refactored to `luatalk::LuaExt`.
 - **Breaking:** `luatalk::lua` has been refactored to `luatalk::dto`.
 
 ### Removed
 
-- **Breaking:** `--lib-default`. Use `--no-default-lib` instead.
+- **Breaking:** Subcommand `show` and `export`. Use `do` instead.
+- **Breaking:** Advanced options `--lib-default` and `--lib`.
+  Use environment variables instead for those settings.
 
 ## [0.3.0-alpha.1] - 2026-07-01
 

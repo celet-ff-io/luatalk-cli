@@ -16,6 +16,20 @@ impl Article {
     pub fn into_pages(self) -> Vec<Page> {
         self.pages
     }
+
+    pub fn concat_pages(self) -> Article {
+        let Self { lang, pages } = self;
+
+        let pages = {
+            let page = {
+                let msgs = pages.into_iter().flatten().collect::<Vec<Msg>>();
+                Page { msgs }
+            };
+            vec![page]
+        };
+
+        Self { lang, pages }
+    }
 }
 
 impl InLang for Article {
@@ -68,6 +82,13 @@ impl<T> IntoAndLang for T {
 pub struct Page {
     #[getset(get = "pub")]
     pub(crate) msgs: Vec<Msg>,
+}
+
+impl Page {
+    #[inline]
+    pub fn into_msgs(self) -> Vec<Msg> {
+        self.msgs
+    }
 }
 
 impl IntoIterator for Page {

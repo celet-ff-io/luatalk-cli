@@ -1,6 +1,7 @@
 use std::sync::OnceLock;
 
 use config::{Config, Environment};
+use getset::Getters;
 use miette::{IntoDiagnostic, Result, miette};
 use serde::Deserialize;
 
@@ -37,17 +38,23 @@ pub fn app_config() -> &'static AppConfig {
 }
 
 /// Application configuration for advanced settings.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Getters)]
 pub struct AppConfig {
+    #[getset(get = "pub")]
+    #[serde(default)]
     do_lua_input_config: DoLuaInputConfig,
 }
 
 /// Configuration for processing Lua input file.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, Getters)]
 pub struct DoLuaInputConfig {
     /// To disable loading the `talk.lua` module.
+    #[getset(get = "pub")]
+    #[serde(default)]
     no_default_lib: bool,
 
     /// Additional Lua search paths which will be appended before the default search paths
+    #[getset(get = "pub")]
+    #[serde(default)]
     addtional_path: String,
 }
