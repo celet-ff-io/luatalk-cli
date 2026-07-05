@@ -1,4 +1,4 @@
--- This file shows what input data should finnaly be like.
+-- This file shows what input data should finally be like.
 -- The evaluated result should be as same as `example.lua`.
 
 return {
@@ -13,18 +13,18 @@ return {
 					},
 					profile = {
 						name = "Her",
-						avatar = { url = "<placeholder-0>" },
+						avatar = { path = "/path/to/image", url = nil },
 					},
 					role = "guest",
 				},
 				{
 					body = {
 						type = "image",
-						value = { url = "<placeholder-1>" },
+						value = { path = "/path/to/image", url = nil },
 					},
 					profile = {
 						name = "Her",
-						avatar = { url = "<placeholder-0>" },
+						avatar = { path = "/path/to/image", url = nil },
 					},
 					role = "guest",
 				},
@@ -38,7 +38,7 @@ return {
 				{
 					body = {
 						type = "image",
-						value = { url = "<placeholder-2>" },
+						value = { path = "/path/to/image", url = nil },
 					},
 					role = "host",
 				},

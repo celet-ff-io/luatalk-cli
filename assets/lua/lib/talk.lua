@@ -5,7 +5,7 @@
 --- @author celet-ff-io
 --- @copyright 2026-present celet-ff-io
 --- @license MIT OR Apache-2.0
---- @release 0.3.0
+--- @release 0.3.1
 --- @return Article
 
 local talk = {}
@@ -40,8 +40,13 @@ local talk = {}
 --- Note that you have to provide either `url` or `path`, or both.
 --- @field path string | nil Path to file which either exists or not, or nil.
 --- If file does not exist, LuaTalk should try fetch it from URL.
---- If is nil, LuaTalk should set it to `<dir>/<sha256>-<filename>`, where <filename> determined by `url`.
---- @field url string | nil URL to fetch image from, optional
+--- If is nil, LuaTalk should set it to `<dir>/<sha256>-<filename>` as fallback,
+--- where <dir> could be anywhere, <sha256> is hash of URL, and <filename> is the filename of URL.
+--- Do not set it to nil,
+--- unless you are sure that your article won't be exported to any file which requires local image file.
+--- @field url string | nil URL to fetch image from, optional.
+--- This field is mainly for some exported formats could use URL for image instead of local file.
+--- You may use it to mark the image source as addition to path, but not alternative to it.
 
 -- Checkers
 
@@ -183,7 +188,7 @@ function talk.body_text(value)
 end
 
 --- Image body.
---- @param value Image | string
+--- @param value Image | string Image or path to image
 --- @return Body
 function talk.body_image(value)
 	if type(value) == "string" then
