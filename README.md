@@ -9,6 +9,7 @@ Build article from Lua file.
 
 - Make article exportable to Typst code
   to make it easy to render as pictures page by page.
+- Add `license` for `generate` subcommand.
 
 ## Features
 
@@ -21,7 +22,7 @@ See [USAGE](./docs/USAGE.md).
 
 ## Install
 
-- Download prebuilt binary from Release if there is one suitable for your platform.
+- Download pre-built binary from Release if there is one suitable for your platform.
 - Use `cargo install luatalk-cli`
   to fetch source from [crates.io](https://crates.io/crates/luatalk-cli)
   , build and install it.
