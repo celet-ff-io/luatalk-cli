@@ -6,7 +6,9 @@
 -- to get code completion and type checking in your IDE.
 local talk = require("talk")
 
--- Aliases
+---------------
+--- Aliases ---
+---------------
 
 local page = talk.page
 
