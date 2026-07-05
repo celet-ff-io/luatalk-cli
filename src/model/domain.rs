@@ -46,8 +46,10 @@ pub trait InLang {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Lang {
     En,
-    JaJp,
-    ZhCn,
+    Ja,
+    Ko,
+    ZhHans,
+    ZhHant,
 }
 
 /// Value with a language tag

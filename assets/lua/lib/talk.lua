@@ -5,7 +5,7 @@
 --- @author celet-ff-io
 --- @copyright 2026-present celet-ff-io
 --- @license MIT OR Apache-2.0
---- @release 0.2.0
+--- @release 0.3.0
 --- @return Article
 
 local talk = {}
@@ -13,7 +13,8 @@ local talk = {}
 -- Models
 
 --- @class Article
---- @field lang string
+--- @field lang string Language code
+--- Available: `en`, `ja`, `ko`, `zh-Hans`, `zh-Hant`
 --- @field pages Page[]
 
 --- @class Page
@@ -36,7 +37,11 @@ local talk = {}
 --- @field content string
 
 --- @class Image
---- @field url string
+--- Note that you have to provide either `url` or `path`, or both.
+--- @field path string | nil Path to file which either exists or not, or nil.
+--- If file does not exist, LuaTalk should try fetch it from URL.
+--- If is nil, LuaTalk should set it to `<dir>/<sha256>-<filename>`, where <filename> determined by `url`.
+--- @field url string | nil URL to fetch image from, optional
 
 -- Checkers
 
@@ -49,7 +54,17 @@ end
 --- @param obj any
 --- @return boolean
 local function is_image(obj)
-	return type(obj) == "table" and type(obj.url) == "string"
+	if type(obj) == "table" then
+		local path = obj.path
+		local url = obj.url
+		if path or url then
+			return (not path or type(path) == "string") and (not url or type(url) == "string")
+		else
+			return false
+		end
+	else
+		return false
+	end
 end
 
 --- @param obj any
@@ -168,10 +183,14 @@ function talk.body_text(value)
 end
 
 --- Image body.
---- @param value Image
+--- @param value Image | string
 --- @return Body
 function talk.body_image(value)
-	assert(is_image(value), "Invaild body value as image")
+	if type(value) == "string" then
+		value = { path = value }
+	else
+		assert(is_image(value), "Invaild body value as image")
+	end
 	return { type = talk.Type.Image, value = value }
 end
 

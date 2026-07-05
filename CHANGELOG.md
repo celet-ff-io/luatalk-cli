@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `"ko"` and `"zh-Hant"` to `lang` field.
+
+### Changed
+
+- **Breaking:** Use Language-Script tag instead of Language-Region tag.
+
+### Fixed
+
+- Wrong translation for `Ja` (`JaJp`).
+
 ## [0.3.0-alpha.2] - 2026-07-05
 
 ### Added

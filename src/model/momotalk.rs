@@ -111,8 +111,10 @@ impl TryFrom<model::AndLang<MsgList>> for Vec<TalkHistoryItem> {
                         type_ = Type::Choice;
                         name = match lang {
                             model::Lang::En => "Reply",
-                            model::Lang::JaJp => "回覆",
-                            model::Lang::ZhCn => "回复",
+                            model::Lang::Ja => "返信する",
+                            model::Lang::Ko => "답장",
+                            model::Lang::ZhHans => "回复",
+                            model::Lang::ZhHant => "回覆",
                         }
                         .to_owned();
                         avatar = String::new();
@@ -122,8 +124,10 @@ impl TryFrom<model::AndLang<MsgList>> for Vec<TalkHistoryItem> {
                         type_ = Type::Story;
                         name = match lang {
                             model::Lang::En => "Story Event",
-                            model::Lang::JaJp => "絆イベント",
-                            model::Lang::ZhCn => "羁绊剧情",
+                            model::Lang::Ja => "絆イベント",
+                            model::Lang::Ko => "이야기 이벤트",
+                            model::Lang::ZhHans => "羁绊剧情",
+                            model::Lang::ZhHant => "羈絆劇情",
                         }
                         .to_owned();
                         avatar = String::new();
