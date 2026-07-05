@@ -9,18 +9,25 @@ use clap_complete::{Shell, generate};
 use clap_stdin::{FileOrStdin, FileOrStdout};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 
-/// Build article from Lua file (using Lua 5.5).
-#[derive(Debug, Parser)]
-#[command(version)]
-#[command(styles = Styles::styled()
+static STYLES: Styles = Styles::styled()
     .header(AnsiColor::Yellow.on_default().effects(Effects::BOLD))
     .usage(AnsiColor::Yellow.on_default().effects(Effects::BOLD))
     .literal(AnsiColor::Green.on_default().effects(Effects::BOLD))
-    .placeholder(AnsiColor::Red.on_default())
-)]
+    .placeholder(AnsiColor::Red.on_default());
+
+fn styles() -> Styles {
+    STYLES.clone()
+}
+
+/// Build article from Lua file (using Lua 5.5).
+#[derive(Debug, Parser)]
+#[command(version)]
+#[command(styles = styles())]
 #[command(
-    after_help = "Visit the crate page at 'https://crates.io/crates/luatalk-cli' \
-        or the repository for more information.
+    after_help = "Use the subcommand `generate config-help` for advanced configuration options.
+
+Visit the crate page at `https://crates.io/crates/luatalk-cli` \
+or the repository for more information.
 "
 )]
 pub struct AppArgs {
@@ -60,21 +67,26 @@ pub enum AppCommand {
 }
 
 pub mod generate {
+    use std::io::{IsTerminal, stdout};
+
     use super::*;
 
     #[derive(Debug, Clone, Subcommand)]
     pub enum Command {
-        /// Generate example input Lua file
+        /// Example input Lua file
         Example,
 
-        /// Generate shell completion script for the specified shell.
+        /// Shell completion script for the specified shell.
         #[command(after_help = "e.g. `source <(luatalk generate completion bash)` \
             for bash users to load the completion script in current session.")]
         Completion { shell: Shell },
 
-        /// Generate useful assets file.
+        /// Useful assets file.
         /// You may also obtain them from source.
         Asset { asset: AssetArg },
+
+        /// Help about advanced configuration of this program
+        ConfigHelp,
     }
 
     #[derive(Debug, Clone, ValueEnum)]
@@ -91,6 +103,34 @@ pub mod generate {
     pub fn completion(shell: Shell, buf: &mut dyn std::io::Write) {
         let mut cmd = AppArgs::command();
         generate(shell, &mut cmd, "luatalk", buf);
+    }
+
+    pub fn help_config() {
+        let h;
+        let l;
+        let p;
+        let r;
+        if stdout().is_terminal() {
+            let styles = styles();
+            h = styles.get_header().render().to_string();
+            l = styles.get_literal().render().to_string();
+            p = styles.get_placeholder().render().to_string();
+            r = styles.get_header().render_reset().to_string();
+        } else {
+            h = String::new();
+            l = String::new();
+            p = String::new();
+            r = String::new();
+        };
+        println!(
+            "{h}Via environment variables:{r}
+{l}LUATALK{r}
+  {l}DO_LUA{r}
+    {l}NO_DEFAULT_LIB{r}: To disable loading the `talk.lua` module
+      LUATALK__DO_LUA__NO_DEFAULT_LIB={p}1{r}
+    {l}ADDITIONAL_PATH{r}: Additional Lua search paths which will be appended before the default search paths
+      LUATALK__DO_LUA__ADDITIONAL_PATH={p}'/path/to/lib/?.lua;/path/to/lib/?/init.lua;'{r}"
+        );
     }
 }
 

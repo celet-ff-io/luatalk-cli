@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Short flag `-c` stands for `--concat-pages`.
 - Output subcommands for different formats with JSON support.
 - Add configuration from environment variables for advanced settings.
+- Add help for configuration from environment variables.
 - Derive `Serialize` for structures in `luatalk::dto`.
 
 ### Changed

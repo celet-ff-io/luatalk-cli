@@ -117,11 +117,12 @@ impl TryFrom<AppCommand> for Action {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum GenerateAction {
     Example,
     Completion { shell: clap_complete::Shell },
     Asset { asset: Asset },
+    ConfigHelp,
 }
 
 impl From<generate::Command> for GenerateAction {
@@ -132,6 +133,7 @@ impl From<generate::Command> for GenerateAction {
             generate::Command::Asset { asset } => Self::Asset {
                 asset: asset.into(),
             },
+            generate::Command::ConfigHelp => Self::ConfigHelp,
         }
     }
 }
@@ -237,6 +239,11 @@ impl Runnable for App<state::Initial> {
                         Self::print_asset_str(include_str!("../../../assets/lua/lib/talk.lua"))
                     }
                 },
+
+                GenerateAction::ConfigHelp => {
+                    generate::help_config();
+                    Ok(())
+                }
             },
 
             Action::Do {

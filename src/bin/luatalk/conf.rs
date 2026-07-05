@@ -60,8 +60,8 @@ pub struct DoLuaConfig {
     #[serde(default)]
     no_default_lib: bool,
 
-    /// Additional Lua search paths which will be appended before the default search paths
-    /// e.g. `LUATALK__DO_LUA__ADDITIONAL_PATH="/path/to/lib/?.lua;/path/to/lib/?/init.lua;"`
+    /// Additional Lua search paths which will be appended before the default search paths.
+    /// e.g. `LUATALK__DO_LUA__ADDITIONAL_PATH='/path/to/lib/?.lua;/path/to/lib/?/init.lua;'`
     #[getset(get = "pub")]
     #[serde(default)]
     additional_path: String,
