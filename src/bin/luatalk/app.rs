@@ -207,10 +207,10 @@ impl TryFrom<AppArgs> for App<state::Initial> {
         let args = value;
 
         miette::set_panic_hook();
-        conf::try_init_app_config()?;
         env_logger::Builder::new()
             .filter_level(args.verbose.log_level_filter())
             .init();
+        conf::try_init_app_config()?;
 
         Self {
             action: args.command.pipe(Action::try_from)?.pipe(Rc::new),
@@ -268,11 +268,11 @@ impl App<state::Initial> {
             InputFormat::Lua => {
                 let lua = {
                     let lua = Lua::new();
-                    let do_lua_input_config = conf::app_config().do_lua_input_config();
+                    let do_lua_input_config = conf::app_config().do_lua();
                     if !do_lua_input_config.no_default_lib() {
                         lua.load_default_lib().into_diagnostic()?;
                     }
-                    let additional_path = do_lua_input_config.addtional_path();
+                    let additional_path = do_lua_input_config.additional_path();
                     if !additional_path.is_empty() {
                         lua.append_left_additional_path(additional_path)
                             .into_diagnostic()?;
