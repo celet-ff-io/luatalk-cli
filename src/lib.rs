@@ -109,11 +109,13 @@
 
 mod error;
 mod model;
-mod net;
 mod talk;
+
+pub mod net;
 
 pub use error::LuaParseError;
 
+pub use model::ImageValueError;
 pub use model::{AndLang, InLang, IntoAndLang, Lang};
 pub use model::{Article, Body, Msg, Page, Profile};
 pub use model::{ImageValue, Role, TextValue};
