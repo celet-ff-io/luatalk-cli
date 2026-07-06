@@ -11,7 +11,7 @@ use serde::Serialize;
 use serde_repr::Serialize_repr;
 use tap::{Pipe, Tap};
 
-use crate::model::{self, InLang, IntoAndLang};
+use crate::model::domain::{self, InLang, IntoAndLang};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct MomotalkExport {
@@ -56,13 +56,13 @@ pub enum Type {
     Message = 4,
 }
 
-type MsgList = Vec<model::Msg>;
+type MsgList = Vec<domain::Msg>;
 
-impl TryFrom<model::AndLang<MsgList>> for Vec<TalkHistoryItem> {
+impl TryFrom<domain::AndLang<MsgList>> for Vec<TalkHistoryItem> {
     type Error = MomotalkExportError;
 
-    fn try_from(msgs: model::AndLang<MsgList>) -> Result<Self, Self::Error> {
-        let model::AndLang { value: msgs, lang } = msgs;
+    fn try_from(msgs: domain::AndLang<MsgList>) -> Result<Self, Self::Error> {
+        let domain::AndLang { value: msgs, lang } = msgs;
         msgs.into_iter()
             .enumerate()
             .map(|(i, msg)| -> Result<TalkHistoryItem, MomotalkExportError> {
@@ -75,13 +75,13 @@ impl TryFrom<model::AndLang<MsgList>> for Vec<TalkHistoryItem> {
                 let flag = 0;
                 let content;
 
-                let model::Msg {
+                let domain::Msg {
                     role,
                     body,
                     profile,
                 } = msg;
                 match role {
-                    model::Role::Guest => {
+                    domain::Role::Guest => {
                         type_ = Type::Student;
                         match profile {
                             Some(profile) => {
@@ -95,39 +95,39 @@ impl TryFrom<model::AndLang<MsgList>> for Vec<TalkHistoryItem> {
                         }
                         content = body.try_into_content()?;
                     }
-                    model::Role::Host => {
+                    domain::Role::Host => {
                         type_ = Type::Sensei;
                         name = "sensei".to_owned();
                         avatar = String::new();
                         content = body.try_into_content()?;
                     }
-                    model::Role::System => {
+                    domain::Role::System => {
                         type_ = Type::Message;
                         name = "systemInfo".to_owned();
                         avatar = String::new();
                         content = body.try_into_text()?;
                     }
-                    model::Role::Reply => {
+                    domain::Role::Reply => {
                         type_ = Type::Choice;
                         name = match lang {
-                            model::Lang::En => "Reply",
-                            model::Lang::Ja => "返信する",
-                            model::Lang::Ko => "답장",
-                            model::Lang::ZhHans => "回复",
-                            model::Lang::ZhHant => "回覆",
+                            domain::Lang::En => "Reply",
+                            domain::Lang::Ja => "返信する",
+                            domain::Lang::Ko => "답장",
+                            domain::Lang::ZhHans => "回复",
+                            domain::Lang::ZhHant => "回覆",
                         }
                         .to_owned();
                         avatar = String::new();
                         content = body.try_into_text()?;
                     }
-                    model::Role::BondStory => {
+                    domain::Role::BondStory => {
                         type_ = Type::Story;
                         name = match lang {
-                            model::Lang::En => "Story Event",
-                            model::Lang::Ja => "絆イベント",
-                            model::Lang::Ko => "이야기 이벤트",
-                            model::Lang::ZhHans => "羁绊剧情",
-                            model::Lang::ZhHant => "羈絆劇情",
+                            domain::Lang::En => "Story Event",
+                            domain::Lang::Ja => "絆イベント",
+                            domain::Lang::Ko => "이야기 이벤트",
+                            domain::Lang::ZhHans => "羁绊剧情",
+                            domain::Lang::ZhHant => "羈絆劇情",
                         }
                         .to_owned();
                         avatar = String::new();
@@ -153,11 +153,11 @@ trait TryIntoText {
     fn try_into_text(self) -> Result<String, MomotalkExportError>;
 }
 
-impl TryIntoText for model::Body {
+impl TryIntoText for domain::Body {
     fn try_into_text(self) -> Result<String, MomotalkExportError> {
         match self {
-            model::Body::Text(text) => Ok(text.into_content()),
-            model::Body::Image(..) => Err(MomotalkExportError::InvaildContentType),
+            domain::Body::Text(text) => Ok(text.into_content()),
+            domain::Body::Image(..) => Err(MomotalkExportError::InvaildContentType),
         }
     }
 }
@@ -166,11 +166,11 @@ trait TryIntoContent {
     fn try_into_content(self) -> Result<String, MomotalkExportError>;
 }
 
-impl TryIntoContent for model::Body {
+impl TryIntoContent for domain::Body {
     fn try_into_content(self) -> Result<String, MomotalkExportError> {
         match self {
-            model::Body::Text(text) => text.into_content(),
-            model::Body::Image(image) => image.url_or_data_url()?,
+            domain::Body::Text(text) => text.into_content(),
+            domain::Body::Image(image) => image.url_or_data_url()?,
         }
         .pipe(Ok)
     }
@@ -180,12 +180,12 @@ trait ImageValueExt {
     fn url_or_data_url(&self) -> Result<String, MomotalkExportError>;
 }
 
-impl ImageValueExt for model::ImageValue {
+impl ImageValueExt for domain::ImageValue {
     fn url_or_data_url(&self) -> Result<String, MomotalkExportError> {
-        let url = self.url();
-        if let Some(url) = url {
+        if let Some(url) = self.url() {
             return url.clone().pipe(Ok);
         }
+        self.try_ensure_path()?;
         todo!()
     }
 }
@@ -197,6 +197,9 @@ pub enum MomotalkExportError {
 
     #[error("Require text while body type is image")]
     InvaildContentType,
+
+    #[error("ImageValue error: {0}")]
+    ImageValueError(#[from] domain::ImageValueError),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -211,10 +214,10 @@ pub struct SelectListItem {
     pub avatar: String,
 }
 
-impl TryFrom<model::Article> for Vec<MomotalkExport> {
+impl TryFrom<domain::Article> for Vec<MomotalkExport> {
     type Error = MomotalkExportError;
 
-    fn try_from(value: model::Article) -> Result<Self, Self::Error> {
+    fn try_from(value: domain::Article) -> Result<Self, Self::Error> {
         let article = value;
         let lang = article.lang();
         article
@@ -231,7 +234,7 @@ impl TryFrom<model::Article> for Vec<MomotalkExport> {
             .map(|(page, i)| -> Result<MomotalkExport, MomotalkExportError> {
                 let talk_history = page
                     .into_iter()
-                    .collect::<Vec<model::Msg>>()
+                    .collect::<Vec<domain::Msg>>()
                     .into_and_lang(lang)
                     .try_into()?;
                 let select_list = Vec::new();
@@ -259,7 +262,7 @@ mod tests {
     use crate::{IntoAndLang, Page};
 
     use super::{
-        model::{Body, ImageValue, Msg, Profile, Role, TextValue},
+        domain::{Body, ImageValue, Msg, Profile, Role, TextValue},
         *,
     };
 
@@ -373,7 +376,7 @@ mod tests {
                 .build(),
         ];
 
-        let got: Vec<TalkHistoryItem> = msgs.into_and_lang(model::Lang::En).try_into().unwrap();
+        let got: Vec<TalkHistoryItem> = msgs.into_and_lang(domain::Lang::En).try_into().unwrap();
 
         let expected = vec![
             TalkHistoryItem {
@@ -451,8 +454,8 @@ mod tests {
             )
             .build()
             .pipe(Arc::new);
-        let article = model::Article::builder()
-            .lang(model::Lang::En)
+        let article = domain::Article::builder()
+            .lang(domain::Lang::En)
             .pages(vec![
                 Page::builder()
                     .msgs(vec![
