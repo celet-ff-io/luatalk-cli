@@ -5,8 +5,10 @@ use std::{
     sync::Arc,
 };
 
+use data_encoding::BASE64;
 use getset::Getters;
 use log::debug;
+use tap::Pipe;
 use typed_builder::TypedBuilder;
 
 use crate::net::agent;
@@ -214,8 +216,14 @@ impl ImageValue {
         Ok(())
     }
 
-    pub fn data_url(&self) -> Option<String> {
-        todo!()
+    pub fn try_generate_data_url(&self) -> Result<String, ImageValueError> {
+        let path = self.path();
+        let mime_type = path
+            .pipe(mime_guess::from_path)
+            .first()
+            .ok_or(ImageValueError::MimeTypeNotFound(path.to_owned()))?;
+        let encoded = fs::read(path)?.pipe(|bytes| BASE64.encode(&bytes));
+        format!("data:{};base64,{}", mime_type, encoded).pipe(Ok)
     }
 }
 
@@ -223,8 +231,12 @@ impl ImageValue {
 pub enum ImageValueError {
     #[error("File system IO error occurred: {0}")]
     FsIoError(#[from] std::io::Error),
+
     #[error("Network IO error occurred: {0}")]
     NetIOError(#[from] ureq::Error),
+
+    #[error("MIME type not found for path: {0}")]
+    MimeTypeNotFound(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Getters, TypedBuilder)]

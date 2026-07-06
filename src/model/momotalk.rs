@@ -186,7 +186,7 @@ impl ImageValueExt for domain::ImageValue {
             return url.clone().pipe(Ok);
         }
         self.try_ensure_path()?;
-        todo!()
+        self.try_generate_data_url()?.pipe(Ok)
     }
 }
 
