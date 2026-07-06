@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use tap::Pipe;
 use url::Url;
 
-use crate::{error::LuaParseError, model};
+use crate::{error::LuaParseError, model::domain};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Article {
@@ -38,9 +38,9 @@ impl FromLua for Article {
     }
 }
 
-impl From<model::Article> for Article {
-    fn from(article: model::Article) -> Self {
-        let model::Article { lang, pages } = article;
+impl From<domain::Article> for Article {
+    fn from(article: domain::Article) -> Self {
+        let domain::Article { lang, pages } = article;
         Article {
             lang: lang.into(),
             pages: pages.into_iter().map(Into::into).collect(),
@@ -48,17 +48,17 @@ impl From<model::Article> for Article {
     }
 }
 
-impl TryFrom<Article> for model::Article {
+impl TryFrom<Article> for domain::Article {
     type Error = DtoError;
 
     fn try_from(article: Article) -> Result<Self, Self::Error> {
         let Article { lang, pages } = article;
-        model::Article {
+        domain::Article {
             lang: lang.into(),
             pages: pages
                 .into_iter()
                 .map(TryInto::try_into)
-                .collect::<Result<Vec<model::Page>, Self::Error>>()?,
+                .collect::<Result<Vec<domain::Page>, Self::Error>>()?,
         }
         .pipe(Ok)
     }
@@ -82,26 +82,26 @@ pub enum Lang {
     ZhHant,
 }
 
-impl From<model::Lang> for Lang {
-    fn from(lang: model::Lang) -> Self {
+impl From<domain::Lang> for Lang {
+    fn from(lang: domain::Lang) -> Self {
         match lang {
-            model::Lang::En => Lang::En,
-            model::Lang::Ja => Lang::Ja,
-            model::Lang::Ko => Lang::Ko,
-            model::Lang::ZhHans => Lang::ZhHans,
-            model::Lang::ZhHant => Lang::ZhHant,
+            domain::Lang::En => Lang::En,
+            domain::Lang::Ja => Lang::Ja,
+            domain::Lang::Ko => Lang::Ko,
+            domain::Lang::ZhHans => Lang::ZhHans,
+            domain::Lang::ZhHant => Lang::ZhHant,
         }
     }
 }
 
-impl From<Lang> for model::Lang {
+impl From<Lang> for domain::Lang {
     fn from(lang: Lang) -> Self {
         match lang {
-            Lang::En => model::Lang::En,
-            Lang::Ja => model::Lang::Ja,
-            Lang::Ko => model::Lang::Ko,
-            Lang::ZhHans => model::Lang::ZhHans,
-            Lang::ZhHant => model::Lang::ZhHant,
+            Lang::En => domain::Lang::En,
+            Lang::Ja => domain::Lang::Ja,
+            Lang::Ko => domain::Lang::Ko,
+            Lang::ZhHans => domain::Lang::ZhHans,
+            Lang::ZhHant => domain::Lang::ZhHant,
         }
     }
 }
@@ -111,25 +111,25 @@ pub struct Page {
     pub msgs: Vec<Msg>,
 }
 
-impl From<model::Page> for Page {
-    fn from(page: model::Page) -> Self {
-        let model::Page { msgs } = page;
+impl From<domain::Page> for Page {
+    fn from(page: domain::Page) -> Self {
+        let domain::Page { msgs } = page;
         Page {
             msgs: msgs.into_iter().map(Into::into).collect(),
         }
     }
 }
 
-impl TryFrom<Page> for model::Page {
+impl TryFrom<Page> for domain::Page {
     type Error = DtoError;
 
     fn try_from(page: Page) -> Result<Self, Self::Error> {
         let Page { msgs } = page;
-        model::Page {
+        domain::Page {
             msgs: msgs
                 .into_iter()
                 .map(TryInto::try_into)
-                .collect::<Result<Vec<model::Msg>, Self::Error>>()?,
+                .collect::<Result<Vec<domain::Msg>, Self::Error>>()?,
         }
         .pipe(Ok)
     }
@@ -142,9 +142,9 @@ pub struct Msg {
     pub profile: Option<Profile>,
 }
 
-impl From<model::Msg> for Msg {
-    fn from(msg: model::Msg) -> Self {
-        let model::Msg {
+impl From<domain::Msg> for Msg {
+    fn from(msg: domain::Msg) -> Self {
+        let domain::Msg {
             role,
             body,
             profile, // profile: Option<Arc<Profile>>
@@ -157,7 +157,7 @@ impl From<model::Msg> for Msg {
     }
 }
 
-impl TryFrom<Msg> for model::Msg {
+impl TryFrom<Msg> for domain::Msg {
     type Error = DtoError;
 
     fn try_from(msg: Msg) -> Result<Self, Self::Error> {
@@ -172,7 +172,7 @@ impl TryFrom<Msg> for model::Msg {
             None
         }
         .map(Arc::new);
-        model::Msg {
+        domain::Msg {
             role: role.into(),
             body: body.try_into()?,
             profile,
@@ -191,26 +191,26 @@ pub enum Role {
     BondStory,
 }
 
-impl From<model::Role> for Role {
-    fn from(role: model::Role) -> Self {
+impl From<domain::Role> for Role {
+    fn from(role: domain::Role) -> Self {
         match role {
-            model::Role::Guest => Role::Guest,
-            model::Role::Host => Role::Host,
-            model::Role::System => Role::System,
-            model::Role::Reply => Role::Reply,
-            model::Role::BondStory => Role::BondStory,
+            domain::Role::Guest => Role::Guest,
+            domain::Role::Host => Role::Host,
+            domain::Role::System => Role::System,
+            domain::Role::Reply => Role::Reply,
+            domain::Role::BondStory => Role::BondStory,
         }
     }
 }
 
-impl From<Role> for model::Role {
+impl From<Role> for domain::Role {
     fn from(role: Role) -> Self {
         match role {
-            Role::Guest => model::Role::Guest,
-            Role::Host => model::Role::Host,
-            Role::System => model::Role::System,
-            Role::Reply => model::Role::Reply,
-            Role::BondStory => model::Role::BondStory,
+            Role::Guest => domain::Role::Guest,
+            Role::Host => domain::Role::Host,
+            Role::System => domain::Role::System,
+            Role::Reply => domain::Role::Reply,
+            Role::BondStory => domain::Role::BondStory,
         }
     }
 }
@@ -222,22 +222,22 @@ pub enum Body {
     Image(ImageValue),
 }
 
-impl From<model::Body> for Body {
-    fn from(body: model::Body) -> Self {
+impl From<domain::Body> for Body {
+    fn from(body: domain::Body) -> Self {
         match body {
-            model::Body::Text(text_value) => Body::Text(text_value.into()),
-            model::Body::Image(image_value) => Body::Image(image_value.into()),
+            domain::Body::Text(text_value) => Body::Text(text_value.into()),
+            domain::Body::Image(image_value) => Body::Image(image_value.into()),
         }
     }
 }
 
-impl TryFrom<Body> for model::Body {
+impl TryFrom<Body> for domain::Body {
     type Error = DtoError;
 
     fn try_from(body: Body) -> Result<Self, Self::Error> {
         match body {
-            Body::Text(text_value) => model::Body::Text(text_value.into()),
-            Body::Image(image_value) => model::Body::Image(image_value.try_into()?),
+            Body::Text(text_value) => domain::Body::Text(text_value.into()),
+            Body::Image(image_value) => domain::Body::Image(image_value.try_into()?),
         }
         .pipe(Ok)
     }
@@ -248,17 +248,17 @@ pub struct TextValue {
     pub content: String,
 }
 
-impl From<model::TextValue> for TextValue {
-    fn from(text_value: model::TextValue) -> Self {
-        let model::TextValue { content } = text_value;
+impl From<domain::TextValue> for TextValue {
+    fn from(text_value: domain::TextValue) -> Self {
+        let domain::TextValue { content } = text_value;
         TextValue { content }
     }
 }
 
-impl From<TextValue> for model::TextValue {
+impl From<TextValue> for domain::TextValue {
     fn from(text_value: TextValue) -> Self {
         let TextValue { content } = text_value;
-        model::TextValue { content }
+        domain::TextValue { content }
     }
 }
 
@@ -268,9 +268,9 @@ pub struct ImageValue {
     pub url: Option<String>,
 }
 
-impl From<model::ImageValue> for ImageValue {
-    fn from(image_value: model::ImageValue) -> Self {
-        let model::ImageValue { path, url } = image_value;
+impl From<domain::ImageValue> for ImageValue {
+    fn from(image_value: domain::ImageValue) -> Self {
+        let domain::ImageValue { path, url } = image_value;
         ImageValue {
             path: Some(path),
             url,
@@ -278,7 +278,7 @@ impl From<model::ImageValue> for ImageValue {
     }
 }
 
-impl TryFrom<ImageValue> for model::ImageValue {
+impl TryFrom<ImageValue> for domain::ImageValue {
     type Error = DtoError;
     fn try_from(image_value: ImageValue) -> Result<Self, Self::Error> {
         let ImageValue { path, url } = image_value;
@@ -286,17 +286,17 @@ impl TryFrom<ImageValue> for model::ImageValue {
             path
         } else {
             let url: &str = url.as_ref().ok_or(DtoError::NeitherPathNorUrl)?;
-            let prefix = BASE32HEX_NOPAD.encode(&url.as_bytes());
+            let prefix = BASE32HEX_NOPAD.encode(url.as_bytes());
             if let Some(filename) = url.pipe(Url::parse).ok().pipe(|url| {
-                let seg = url?.path_segments()?.last()?.to_owned();
+                let seg = url?.path_segments()?.next_back()?.to_owned();
                 if seg.is_empty() { None } else { Some(seg) }
             }) {
                 format!("{prefix}-{filename}")
             } else {
-                format!("{prefix}")
+                prefix
             }
         };
-        model::ImageValue { path, url }.pipe(Ok)
+        domain::ImageValue { path, url }.pipe(Ok)
     }
 }
 
@@ -306,9 +306,9 @@ pub struct Profile {
     pub avatar: ImageValue,
 }
 
-impl From<model::Profile> for Profile {
-    fn from(profile: model::Profile) -> Self {
-        let model::Profile { name, avatar } = profile;
+impl From<domain::Profile> for Profile {
+    fn from(profile: domain::Profile) -> Self {
+        let domain::Profile { name, avatar } = profile;
         Profile {
             name,
             avatar: avatar.into(),
@@ -316,12 +316,12 @@ impl From<model::Profile> for Profile {
     }
 }
 
-impl TryFrom<Profile> for model::Profile {
+impl TryFrom<Profile> for domain::Profile {
     type Error = DtoError;
 
     fn try_from(profile: Profile) -> Result<Self, Self::Error> {
         let Profile { name, avatar } = profile;
-        model::Profile {
+        domain::Profile {
             name,
             avatar: avatar.try_into()?,
         }

@@ -1,7 +1,15 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    fs::{self, File},
+    io,
+    path::Path,
+    sync::Arc,
+};
 
 use getset::Getters;
+use log::debug;
 use typed_builder::TypedBuilder;
+
+use crate::net::agent;
 
 #[derive(Debug, Clone, PartialEq, Eq, Getters, TypedBuilder)]
 pub struct Article {
@@ -166,16 +174,57 @@ pub struct ImageValue {
 }
 
 impl ImageValue {
-    /// Returns the path.
-    /// Will try to fetch the image from URL to the path
+    #[inline]
+    pub fn into_path(self) -> String {
+        self.path
+    }
+
+    #[inline]
+    pub fn into_path_and_url(self) -> (String, Option<String>) {
+        let Self { path, url } = self;
+        (path, url)
+    }
+
+    /// Try to fetch the image from URL to the path
     /// if the file does not exist.
-    pub fn try_into_path_available(self) -> Result<PathBuf, String> {
-        todo!()
+    pub fn try_ensure_path(&self) -> Result<(), ImageValueError> {
+        let Self { path, url } = self;
+        let path = Path::new(path);
+        if !path.exists() {
+            if let Some(parent) = path.parent()
+                && !parent.exists()
+            {
+                fs::create_dir_all(parent)?;
+                debug!("Created directory: {:?}", parent);
+            };
+            if let Some(url) = url {
+                debug!("Fetch image from URL: {:?}", url);
+                let mut reader = agent().get(url).call()?.into_body().into_reader();
+                let mut writer = File::create(path)?;
+                io::copy(&mut reader, &mut writer)?;
+                debug!("Image and saved to path: {:?}", path);
+            } else {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    format!("File not found when no URL provided: {:?}", path),
+                )
+                .into());
+            }
+        }
+        Ok(())
     }
 
     pub fn data_url(&self) -> Option<String> {
         todo!()
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ImageValueError {
+    #[error("File system IO error occurred: {0}")]
+    FsIoError(#[from] std::io::Error),
+    #[error("Network IO error occurred: {0}")]
+    NetIOError(#[from] ureq::Error),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Getters, TypedBuilder)]

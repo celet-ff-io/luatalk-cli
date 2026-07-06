@@ -109,6 +109,7 @@
 
 mod error;
 mod model;
+mod net;
 mod talk;
 
 pub use error::LuaParseError;
