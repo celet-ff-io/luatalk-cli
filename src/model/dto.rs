@@ -53,14 +53,16 @@ impl TryFrom<Article> for domain::Article {
 
     fn try_from(article: Article) -> Result<Self, Self::Error> {
         let Article { lang, pages } = article;
-        domain::Article {
-            lang: lang.into(),
-            pages: pages
-                .into_iter()
-                .map(TryInto::try_into)
-                .collect::<Result<Vec<domain::Page>, Self::Error>>()?,
-        }
-        .pipe(Ok)
+        domain::Article::builder()
+            .lang(lang.into())
+            .pages(
+                pages
+                    .into_iter()
+                    .map(TryInto::try_into)
+                    .collect::<Result<Vec<domain::Page>, Self::Error>>()?,
+            )
+            .build()
+            .pipe(Ok)
     }
 }
 
@@ -172,12 +174,12 @@ impl TryFrom<Msg> for domain::Msg {
             None
         }
         .map(Arc::new);
-        domain::Msg {
-            role: role.into(),
-            body: body.try_into()?,
-            profile,
-        }
-        .pipe(Ok)
+        domain::Msg::builder()
+            .role(role.into())
+            .body(body.try_into()?)
+            .profile_opt(profile)
+            .build()
+            .pipe(Ok)
     }
 }
 
@@ -258,7 +260,7 @@ impl From<domain::TextValue> for TextValue {
 impl From<TextValue> for domain::TextValue {
     fn from(text_value: TextValue) -> Self {
         let TextValue { content } = text_value;
-        domain::TextValue { content }
+        domain::TextValue::builder().content(content).build()
     }
 }
 
@@ -296,7 +298,11 @@ impl TryFrom<ImageValue> for domain::ImageValue {
                 prefix
             }
         };
-        domain::ImageValue { path, url }.pipe(Ok)
+        domain::ImageValue::builder()
+            .path(path)
+            .url(url)
+            .build()
+            .pipe(Ok)
     }
 }
 
@@ -321,11 +327,11 @@ impl TryFrom<Profile> for domain::Profile {
 
     fn try_from(profile: Profile) -> Result<Self, Self::Error> {
         let Profile { name, avatar } = profile;
-        domain::Profile {
-            name,
-            avatar: avatar.try_into()?,
-        }
-        .pipe(Ok)
+        domain::Profile::builder()
+            .name(name)
+            .avatar(avatar.try_into()?)
+            .build()
+            .pipe(Ok)
     }
 }
 

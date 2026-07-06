@@ -119,7 +119,7 @@ pub struct Msg {
     #[getset(get = "pub")]
     pub(crate) body: Body,
 
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(strip_option(fallback = profile_opt)))]
     pub(crate) profile: Option<Arc<Profile>>,
 }
 
