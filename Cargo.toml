@@ -19,6 +19,7 @@ config = { version = "0.15.25", default-features = false, features = [
   "convert-case",
 ] }
 const_format = "0.2.36"
+data-encoding = "2.11.0"
 env_logger = "0.11.11"
 getset = "0.1.7"
 log = "0.4.33"
@@ -38,6 +39,7 @@ strfmt = "0.2.5"
 tap = "1.0.1"
 thiserror = "2.0.18"
 typed-builder = "0.23.2"
+url = "2.5.8"
 
 [[bin]]
 name = "luatalk"

@@ -6,25 +6,27 @@
 //!
 //! ```
 //! use std::sync::Arc;
-//! use luatalk::{Article, Body, ImageValue, Lang, LuaTalkExt, Msg, Page, Profile, Role, TextValue, dto};
+//! use luatalk::{Article, Body, ImageValue, Lang, LuaExt, Msg, Page, Profile, Role, TextValue, dto};
 //! use miette::{IntoDiagnostic, Result, WrapErr};
 //! use mlua::Lua;
+//! use pretty_assertions::assert_eq;
 //! use tap::Pipe;
 //!
 //! let lua = Lua::new();
 //! lua.load_default_lib().unwrap();
 //!
 //! let chunk = include_str!("../assets/lua/input/example.lua");
-//! let got = dto::Article::try_from_chunk(chunk, &lua)
+//! let got: Article = dto::Article::try_from_chunk(chunk, &lua)
 //!     .unwrap()
-//!     .pipe(Article::from);
+//!     .try_into()
+//!     .unwrap();
 //!
 //! let expected = {
 //!     let her = Profile::builder()
 //!         .name("Her".to_owned())
 //!         .avatar(
 //!             ImageValue::builder()
-//!                 .url("<placeholder-0>".to_owned())
+//!                 .path("/path/to/image".to_owned())
 //!                 .build(),
 //!         )
 //!         .build()
@@ -47,7 +49,7 @@
 //!                         .role(Role::Guest)
 //!                         .body(Body::Image(
 //!                             ImageValue::builder()
-//!                                 .url("<placeholder-1>".to_owned())
+//!                                 .path("/path/to/image".to_owned())
 //!                                 .build(),
 //!                         ))
 //!                         .profile(her.pipe_ref(Arc::clone))
@@ -64,7 +66,7 @@
 //!                         .role(Role::Host)
 //!                         .body(Body::Image(
 //!                             ImageValue::builder()
-//!                                 .url("<placeholder-2>".to_owned())
+//!                                 .path("/path/to/image".to_owned())
 //!                                 .build(),
 //!                         ))
 //!                         .build(),

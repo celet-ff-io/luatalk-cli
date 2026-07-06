@@ -7,9 +7,11 @@
 
 use std::sync::Arc;
 
+use data_encoding::BASE32HEX_NOPAD;
 use mlua::{AsChunk, FromLua, Lua, LuaSerdeExt, Table, Value};
 use serde::{Deserialize, Serialize};
 use tap::Pipe;
+use url::Url;
 
 use crate::{error::LuaParseError, model};
 
@@ -46,13 +48,19 @@ impl From<model::Article> for Article {
     }
 }
 
-impl From<Article> for model::Article {
-    fn from(article: Article) -> Self {
+impl TryFrom<Article> for model::Article {
+    type Error = DtoError;
+
+    fn try_from(article: Article) -> Result<Self, Self::Error> {
         let Article { lang, pages } = article;
         model::Article {
             lang: lang.into(),
-            pages: pages.into_iter().map(Into::into).collect(),
+            pages: pages
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<model::Page>, Self::Error>>()?,
         }
+        .pipe(Ok)
     }
 }
 
@@ -112,12 +120,18 @@ impl From<model::Page> for Page {
     }
 }
 
-impl From<Page> for model::Page {
-    fn from(page: Page) -> Self {
+impl TryFrom<Page> for model::Page {
+    type Error = DtoError;
+
+    fn try_from(page: Page) -> Result<Self, Self::Error> {
         let Page { msgs } = page;
         model::Page {
-            msgs: msgs.into_iter().map(Into::into).collect(),
+            msgs: msgs
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<model::Msg>, Self::Error>>()?,
         }
+        .pipe(Ok)
     }
 }
 
@@ -143,18 +157,27 @@ impl From<model::Msg> for Msg {
     }
 }
 
-impl From<Msg> for model::Msg {
-    fn from(msg: Msg) -> Self {
+impl TryFrom<Msg> for model::Msg {
+    type Error = DtoError;
+
+    fn try_from(msg: Msg) -> Result<Self, Self::Error> {
         let Msg {
             role,
             body,
             profile,
         } = msg;
+        let profile = if let Some(profile) = profile {
+            Some(profile.try_into()?)
+        } else {
+            None
+        }
+        .map(Arc::new);
         model::Msg {
             role: role.into(),
-            body: body.into(),
-            profile: profile.map(Into::into).map(Arc::new),
+            body: body.try_into()?,
+            profile,
         }
+        .pipe(Ok)
     }
 }
 
@@ -208,12 +231,15 @@ impl From<model::Body> for Body {
     }
 }
 
-impl From<Body> for model::Body {
-    fn from(body: Body) -> Self {
+impl TryFrom<Body> for model::Body {
+    type Error = DtoError;
+
+    fn try_from(body: Body) -> Result<Self, Self::Error> {
         match body {
             Body::Text(text_value) => model::Body::Text(text_value.into()),
-            Body::Image(image_value) => model::Body::Image(image_value.into()),
+            Body::Image(image_value) => model::Body::Image(image_value.try_into()?),
         }
+        .pipe(Ok)
     }
 }
 
@@ -238,20 +264,39 @@ impl From<TextValue> for model::TextValue {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ImageValue {
-    pub url: String,
+    pub path: Option<String>,
+    pub url: Option<String>,
 }
 
 impl From<model::ImageValue> for ImageValue {
     fn from(image_value: model::ImageValue) -> Self {
-        let model::ImageValue { url } = image_value;
-        ImageValue { url }
+        let model::ImageValue { path, url } = image_value;
+        ImageValue {
+            path: Some(path),
+            url,
+        }
     }
 }
 
-impl From<ImageValue> for model::ImageValue {
-    fn from(image_value: ImageValue) -> Self {
-        let ImageValue { url } = image_value;
-        model::ImageValue { url }
+impl TryFrom<ImageValue> for model::ImageValue {
+    type Error = DtoError;
+    fn try_from(image_value: ImageValue) -> Result<Self, Self::Error> {
+        let ImageValue { path, url } = image_value;
+        let path = if let Some(path) = path {
+            path
+        } else {
+            let url: &str = url.as_ref().ok_or(DtoError::NeitherPathNorUrl)?;
+            let prefix = BASE32HEX_NOPAD.encode(&url.as_bytes());
+            if let Some(filename) = url.pipe(Url::parse).ok().pipe(|url| {
+                let seg = url?.path_segments()?.last()?.to_owned();
+                if seg.is_empty() { None } else { Some(seg) }
+            }) {
+                format!("{prefix}-{filename}")
+            } else {
+                format!("{prefix}")
+            }
+        };
+        model::ImageValue { path, url }.pipe(Ok)
     }
 }
 
@@ -271,12 +316,21 @@ impl From<model::Profile> for Profile {
     }
 }
 
-impl From<Profile> for model::Profile {
-    fn from(profile: Profile) -> Self {
+impl TryFrom<Profile> for model::Profile {
+    type Error = DtoError;
+
+    fn try_from(profile: Profile) -> Result<Self, Self::Error> {
         let Profile { name, avatar } = profile;
         model::Profile {
             name,
-            avatar: avatar.into(),
+            avatar: avatar.try_into()?,
         }
+        .pipe(Ok)
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum DtoError {
+    #[error("Neither path nor url is provided")]
+    NeitherPathNorUrl,
 }

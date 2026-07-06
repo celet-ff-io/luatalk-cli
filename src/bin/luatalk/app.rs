@@ -289,13 +289,15 @@ impl App<state::Initial> {
 
                 dto::Article::try_from_chunk(source, &lua)
                     .into_diagnostic()?
-                    .pipe(Article::from)
+                    .pipe(Article::try_from)
+                    .into_diagnostic()?
             }
 
             InputFormat::Json => serde_json::from_str::<dto::Article>(&source)
                 .into_diagnostic()
                 .wrap_err("Failed to parse JSON input")?
-                .pipe(Article::from),
+                .try_into()
+                .into_diagnostic()?,
         }
         .pipe(|article| {
             if concat_pages {

@@ -151,7 +151,11 @@ pub struct TextValue {
 #[derive(Debug, Clone, PartialEq, Eq, Getters, TypedBuilder)]
 pub struct ImageValue {
     #[getset(get = "pub")]
-    pub(crate) url: String,
+    pub(crate) path: String,
+
+    #[getset(get = "pub")]
+    #[builder(default)]
+    pub(crate) url: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Getters, TypedBuilder)]

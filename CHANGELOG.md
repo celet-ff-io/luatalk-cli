@@ -11,14 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `path` field for the Lua class `Image`.
 - `"ko"` and `"zh-Hant"` to `lang` field.
 
 ### Changed
 
+- **Breaking:** `ImageValue` and the structures using it
+  have got `TryFrom` instead of `From` trait implementation.
+- **Breaking:** Changed definition of the Lua class `Image` in `talk.lua`.
 - **Breaking:** Use Language-Script tag instead of Language-Region tag.
 
 ### Fixed
 
+- Doc test in `lib.rs`.
 - Wrong translation for `Ja` (`JaJp`).
 
 ## [0.3.0-alpha.2] - 2026-07-05
