@@ -300,7 +300,7 @@ impl TryFrom<ImageValue> for domain::ImageValue {
         };
         domain::ImageValue::builder()
             .path(path)
-            .url(url)
+            .url_opt(url)
             .build()
             .pipe(Ok)
     }

@@ -169,7 +169,7 @@ pub struct ImageValue {
     pub(crate) path: String,
 
     #[getset(get = "pub")]
-    #[builder(default)]
+    #[builder(default, setter(strip_option(fallback = url_opt)))]
     pub(crate) url: Option<String>,
 }
 

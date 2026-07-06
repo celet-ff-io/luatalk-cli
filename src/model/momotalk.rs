@@ -274,7 +274,7 @@ mod tests {
         let image_body = Body::Image(
             ImageValue::builder()
                 .path("/path/to/image.webp".to_owned())
-                .url(Some("https://example.com/image.webp".to_owned()))
+                .url("https://example.com/image.webp".to_owned())
                 .build(),
         );
         assert_eq!(
@@ -295,7 +295,7 @@ mod tests {
         let image_body = Body::Image(
             ImageValue::builder()
                 .path("/path/to/image.webp".to_owned())
-                .url(Some("https://example.com/image.webp".to_owned()))
+                .url("https://example.com/image.webp".to_owned())
                 .build(),
         );
         assert!(image_body.try_into_text().is_err());
@@ -308,7 +308,7 @@ mod tests {
             .avatar(
                 ImageValue::builder()
                     .path("/path/to/image.webp".to_owned())
-                    .url(Some("https://example.com/image.webp".to_owned()))
+                    .url("https://example.com/image.webp".to_owned())
                     .build(),
             )
             .build()
@@ -328,7 +328,7 @@ mod tests {
                 .body(Body::Image(
                     ImageValue::builder()
                         .path("/path/to/image.webp".to_owned())
-                        .url(Some("https://example.com/image.webp".to_owned()))
+                        .url("https://example.com/image.webp".to_owned())
                         .build(),
                 ))
                 .profile(her.pipe_ref(Arc::clone))
@@ -346,7 +346,7 @@ mod tests {
                 .body(Body::Image(
                     ImageValue::builder()
                         .path("/path/to/image.webp".to_owned())
-                        .url(Some("https://example.com/image.webp".to_owned()))
+                        .url("https://example.com/image.webp".to_owned())
                         .build(),
                 ))
                 .build(),
@@ -449,7 +449,7 @@ mod tests {
             .avatar(
                 ImageValue::builder()
                     .path("/path/to/image".to_owned())
-                    .url(Some("https://example.com/image.webp".to_owned()))
+                    .url("https://example.com/image.webp".to_owned())
                     .build(),
             )
             .build()
@@ -473,7 +473,7 @@ mod tests {
                             .body(Body::Image(
                                 ImageValue::builder()
                                     .path("/path/to/image.webp".to_owned())
-                                    .url(Some("https://example.com/image.webp".to_owned()))
+                                    .url("https://example.com/image.webp".to_owned())
                                     .build(),
                             ))
                             .profile(her.pipe_ref(Arc::clone))
@@ -491,7 +491,7 @@ mod tests {
                             .body(Body::Image(
                                 ImageValue::builder()
                                     .path("/path/to/image".to_owned())
-                                    .url(Some("https://example.com/image.webp".to_owned()))
+                                    .url("https://example.com/image.webp".to_owned())
                                     .build(),
                             ))
                             .build(),
