@@ -86,20 +86,20 @@ impl TryFrom<model::AndLang<MsgList>> for Vec<TalkHistoryItem> {
                         match profile {
                             Some(profile) => {
                                 name = profile.name.clone();
-                                avatar = todo!();
+                                avatar = profile.avatar.url_or_data_url()?;
                             }
                             None => {
                                 name = String::new();
                                 avatar = String::new();
                             }
                         }
-                        content = body.into_content();
+                        content = body.try_into_content()?;
                     }
                     model::Role::Host => {
                         type_ = Type::Sensei;
                         name = "sensei".to_owned();
                         avatar = String::new();
-                        content = body.into_content();
+                        content = body.try_into_content()?;
                     }
                     model::Role::System => {
                         type_ = Type::Message;
@@ -149,19 +149,6 @@ impl TryFrom<model::AndLang<MsgList>> for Vec<TalkHistoryItem> {
     }
 }
 
-trait IntoContent {
-    fn into_content(self) -> String;
-}
-
-impl IntoContent for model::Body {
-    fn into_content(self) -> String {
-        match self {
-            model::Body::Text(text) => text.content,
-            model::Body::Image(image) => todo!(),
-        }
-    }
-}
-
 trait TryIntoText {
     fn try_into_text(self) -> Result<String, MomotalkExportError>;
 }
@@ -169,9 +156,37 @@ trait TryIntoText {
 impl TryIntoText for model::Body {
     fn try_into_text(self) -> Result<String, MomotalkExportError> {
         match self {
-            model::Body::Text(text) => Ok(text.content),
+            model::Body::Text(text) => Ok(text.into_content()),
             model::Body::Image(..) => Err(MomotalkExportError::InvaildContentType),
         }
+    }
+}
+
+trait TryIntoContent {
+    fn try_into_content(self) -> Result<String, MomotalkExportError>;
+}
+
+impl TryIntoContent for model::Body {
+    fn try_into_content(self) -> Result<String, MomotalkExportError> {
+        match self {
+            model::Body::Text(text) => text.into_content(),
+            model::Body::Image(image) => image.url_or_data_url()?,
+        }
+        .pipe(Ok)
+    }
+}
+
+trait ImageValueExt {
+    fn url_or_data_url(&self) -> Result<String, MomotalkExportError>;
+}
+
+impl ImageValueExt for model::ImageValue {
+    fn url_or_data_url(&self) -> Result<String, MomotalkExportError> {
+        let url = self.url();
+        if let Some(url) = url {
+            return url.clone().pipe(Ok);
+        }
+        todo!()
     }
 }
 
@@ -249,326 +264,341 @@ mod tests {
     };
 
     #[test]
-    fn into_content() {
-        let text_body = model::Body::Text(model::TextValue {
-            content: "Hello".to_owned(),
-        });
-        assert_eq!(text_body.into_content(), "Hello");
+    fn try_into_content() -> Result<()> {
+        let text_body = Body::Text(TextValue::builder().content("Hello".to_owned()).build());
+        assert_eq!(text_body.try_into_content().into_diagnostic()?, "Hello");
 
-        // let image_body = model::Body::Image(model::ImageValue {
-        //     url: "http://example.com/image.png".to_owned(),
-        // });
-        // assert_eq!(image_body.into_content(), "http://example.com/image.png");
+        let image_body = Body::Image(
+            ImageValue::builder()
+                .path("/path/to/image.webp".to_owned())
+                .url(Some("https://example.com/image.webp".to_owned()))
+                .build(),
+        );
+        assert_eq!(
+            image_body.try_into_content().into_diagnostic()?,
+            "https://example.com/image.webp"
+        );
+
+        Ok(())
     }
 
     #[test]
     fn try_into_text() {
-        let text_body = model::Body::Text(model::TextValue {
+        let text_body = Body::Text(TextValue {
             content: "Hello".to_owned(),
         });
         assert_eq!(text_body.try_into_text().unwrap(), "Hello");
 
-        // let image_body = model::Body::Image(model::ImageValue {
-        //     url: "http://example.com/image.png".to_owned(),
-        // });
-        // assert!(image_body.try_into_text().is_err());
+        let image_body = Body::Image(
+            ImageValue::builder()
+                .path("/path/to/image.webp".to_owned())
+                .url(Some("https://example.com/image.webp".to_owned()))
+                .build(),
+        );
+        assert!(image_body.try_into_text().is_err());
     }
 
     #[test]
     fn try_from_and_lang_msg_list() -> Result<()> {
-        // let her = Profile::builder()
-        //     .name("Her".to_owned())
-        //     .avatar(
-        //         ImageValue::builder()
-        //             .path("/path/to/image".to_owned())
-        //             .build(),
-        //     )
-        //     .build()
-        //     .pipe(Arc::new);
-        // let msgs = vec![
-        //     Msg::builder()
-        //         .role(Role::Guest)
-        //         .body(Body::Text(
-        //             TextValue::builder()
-        //                 .content("Example guest message".to_owned())
-        //                 .build(),
-        //         ))
-        //         .profile(her.pipe_ref(Arc::clone))
-        //         .build(),
-        //     Msg::builder()
-        //         .role(Role::Guest)
-        //         .body(Body::Image(
-        //             ImageValue::builder()
-        //                 .path("/path/to/image".to_owned())
-        //                 .build(),
-        //         ))
-        //         .profile(her.pipe_ref(Arc::clone))
-        //         .build(),
-        //     Msg::builder()
-        //         .role(Role::Host)
-        //         .body(Body::Text(
-        //             TextValue::builder()
-        //                 .content("Example host message".to_owned())
-        //                 .build(),
-        //         ))
-        //         .build(),
-        //     Msg::builder()
-        //         .role(Role::Host)
-        //         .body(Body::Image(
-        //             ImageValue::builder()
-        //                 .path("/path/to/image".to_owned())
-        //                 .build(),
-        //         ))
-        //         .build(),
-        //     Msg::builder()
-        //         .role(Role::System)
-        //         .body(Body::Text(
-        //             TextValue::builder()
-        //                 .content("Example system message".to_owned())
-        //                 .build(),
-        //         ))
-        //         .build(),
-        //     Msg::builder()
-        //         .role(Role::Reply)
-        //         .body(Body::Text(
-        //             TextValue::builder()
-        //                 .content("Example reply message".to_owned())
-        //                 .build(),
-        //         ))
-        //         .build(),
-        //     Msg::builder()
-        //         .role(Role::BondStory)
-        //         .body(Body::Text(
-        //             TextValue::builder()
-        //                 .content("Example bond story message".to_owned())
-        //                 .build(),
-        //         ))
-        //         .build(),
-        // ];
-        //
-        // let got: Vec<TalkHistoryItem> = msgs.into_and_lang(model::Lang::En).try_into().unwrap();
-        //
-        // let expected = vec![
-        //     TalkHistoryItem {
-        //         id: 1,
-        //         name: "Her".to_owned(),
-        //         avatar: "/path/to/image".to_owned(),
-        //         type_: Type::Student,
-        //         flag: 0,
-        //         content: "Example guest message".to_owned(),
-        //     },
-        //     TalkHistoryItem {
-        //         id: 2,
-        //         name: "Her".to_owned(),
-        //         avatar: "/path/to/image".to_owned(),
-        //         type_: Type::Student,
-        //         flag: 0,
-        //         content: "/path/to/image".to_owned(),
-        //     },
-        //     TalkHistoryItem {
-        //         id: 3,
-        //         name: "sensei".to_owned(),
-        //         avatar: String::new(),
-        //         type_: Type::Sensei,
-        //         flag: 0,
-        //         content: "Example host message".to_owned(),
-        //     },
-        //     TalkHistoryItem {
-        //         id: 4,
-        //         name: "sensei".to_owned(),
-        //         avatar: String::new(),
-        //         type_: Type::Sensei,
-        //         flag: 0,
-        //         content: "/path/to/image".to_owned(),
-        //     },
-        //     TalkHistoryItem {
-        //         id: 5,
-        //         name: "systemInfo".to_owned(),
-        //         avatar: String::new(),
-        //         type_: Type::Message,
-        //         flag: 0,
-        //         content: "Example system message".to_owned(),
-        //     },
-        //     TalkHistoryItem {
-        //         id: 6,
-        //         name: "Reply".to_owned(),
-        //         avatar: String::new(),
-        //         type_: Type::Choice,
-        //         flag: 0,
-        //         content: "Example reply message".to_owned(),
-        //     },
-        //     TalkHistoryItem {
-        //         id: 7,
-        //         name: "Story Event".to_owned(),
-        //         avatar: String::new(),
-        //         type_: Type::Story,
-        //         flag: 0,
-        //         content: "Example bond story message".to_owned(),
-        //     },
-        // ];
-        //
-        // assert_eq!(got, expected);
+        let her = Profile::builder()
+            .name("Her".to_owned())
+            .avatar(
+                ImageValue::builder()
+                    .path("/path/to/image.webp".to_owned())
+                    .url(Some("https://example.com/image.webp".to_owned()))
+                    .build(),
+            )
+            .build()
+            .pipe(Arc::new);
+        let msgs = vec![
+            Msg::builder()
+                .role(Role::Guest)
+                .body(Body::Text(
+                    TextValue::builder()
+                        .content("Example guest message".to_owned())
+                        .build(),
+                ))
+                .profile(her.pipe_ref(Arc::clone))
+                .build(),
+            Msg::builder()
+                .role(Role::Guest)
+                .body(Body::Image(
+                    ImageValue::builder()
+                        .path("/path/to/image.webp".to_owned())
+                        .url(Some("https://example.com/image.webp".to_owned()))
+                        .build(),
+                ))
+                .profile(her.pipe_ref(Arc::clone))
+                .build(),
+            Msg::builder()
+                .role(Role::Host)
+                .body(Body::Text(
+                    TextValue::builder()
+                        .content("Example host message".to_owned())
+                        .build(),
+                ))
+                .build(),
+            Msg::builder()
+                .role(Role::Host)
+                .body(Body::Image(
+                    ImageValue::builder()
+                        .path("/path/to/image.webp".to_owned())
+                        .url(Some("https://example.com/image.webp".to_owned()))
+                        .build(),
+                ))
+                .build(),
+            Msg::builder()
+                .role(Role::System)
+                .body(Body::Text(
+                    TextValue::builder()
+                        .content("Example system message".to_owned())
+                        .build(),
+                ))
+                .build(),
+            Msg::builder()
+                .role(Role::Reply)
+                .body(Body::Text(
+                    TextValue::builder()
+                        .content("Example reply message".to_owned())
+                        .build(),
+                ))
+                .build(),
+            Msg::builder()
+                .role(Role::BondStory)
+                .body(Body::Text(
+                    TextValue::builder()
+                        .content("Example bond story message".to_owned())
+                        .build(),
+                ))
+                .build(),
+        ];
+
+        let got: Vec<TalkHistoryItem> = msgs.into_and_lang(model::Lang::En).try_into().unwrap();
+
+        let expected = vec![
+            TalkHistoryItem {
+                id: 1,
+                name: "Her".to_owned(),
+                avatar: "https://example.com/image.webp".to_owned(),
+                type_: Type::Student,
+                flag: 0,
+                content: "Example guest message".to_owned(),
+            },
+            TalkHistoryItem {
+                id: 2,
+                name: "Her".to_owned(),
+                avatar: "https://example.com/image.webp".to_owned(),
+                type_: Type::Student,
+                flag: 0,
+                content: "https://example.com/image.webp".to_owned(),
+            },
+            TalkHistoryItem {
+                id: 3,
+                name: "sensei".to_owned(),
+                avatar: String::new(),
+                type_: Type::Sensei,
+                flag: 0,
+                content: "Example host message".to_owned(),
+            },
+            TalkHistoryItem {
+                id: 4,
+                name: "sensei".to_owned(),
+                avatar: String::new(),
+                type_: Type::Sensei,
+                flag: 0,
+                content: "https://example.com/image.webp".to_owned(),
+            },
+            TalkHistoryItem {
+                id: 5,
+                name: "systemInfo".to_owned(),
+                avatar: String::new(),
+                type_: Type::Message,
+                flag: 0,
+                content: "Example system message".to_owned(),
+            },
+            TalkHistoryItem {
+                id: 6,
+                name: "Reply".to_owned(),
+                avatar: String::new(),
+                type_: Type::Choice,
+                flag: 0,
+                content: "Example reply message".to_owned(),
+            },
+            TalkHistoryItem {
+                id: 7,
+                name: "Story Event".to_owned(),
+                avatar: String::new(),
+                type_: Type::Story,
+                flag: 0,
+                content: "Example bond story message".to_owned(),
+            },
+        ];
+
+        assert_eq!(got, expected);
 
         Ok(())
     }
 
     #[test]
     fn try_from_article() -> Result<()> {
-        // let her = Profile::builder()
-        //     .name("Her".to_owned())
-        //     .avatar(
-        //         ImageValue::builder()
-        //             .path("/path/to/image".to_owned())
-        //             .build(),
-        //     )
-        //     .build()
-        //     .pipe(Arc::new);
-        // let article = model::Article::builder()
-        //     .lang(model::Lang::En)
-        //     .pages(vec![
-        //         Page::builder()
-        //             .msgs(vec![
-        //                 Msg::builder()
-        //                     .role(Role::Guest)
-        //                     .body(Body::Text(
-        //                         TextValue::builder()
-        //                             .content("Example guest message".to_owned())
-        //                             .build(),
-        //                     ))
-        //                     .profile(her.pipe_ref(Arc::clone))
-        //                     .build(),
-        //                 Msg::builder()
-        //                     .role(Role::Guest)
-        //                     .body(Body::Image(
-        //                         ImageValue::builder()
-        //                             .path("/path/to/image".to_owned())
-        //                             .build(),
-        //                     ))
-        //                     .profile(her.pipe_ref(Arc::clone))
-        //                     .build(),
-        //                 Msg::builder()
-        //                     .role(Role::Host)
-        //                     .body(Body::Text(
-        //                         TextValue::builder()
-        //                             .content("Example host message".to_owned())
-        //                             .build(),
-        //                     ))
-        //                     .build(),
-        //                 Msg::builder()
-        //                     .role(Role::Host)
-        //                     .body(Body::Image(
-        //                         ImageValue::builder()
-        //                             .path("/path/to/image".to_owned())
-        //                             .build(),
-        //                     ))
-        //                     .build(),
-        //             ])
-        //             .build(),
-        //         Page::builder()
-        //             .msgs(vec![
-        //                 Msg::builder()
-        //                     .role(Role::System)
-        //                     .body(Body::Text(
-        //                         TextValue::builder()
-        //                             .content("Example system message".to_owned())
-        //                             .build(),
-        //                     ))
-        //                     .build(),
-        //                 Msg::builder()
-        //                     .role(Role::Reply)
-        //                     .body(Body::Text(
-        //                         TextValue::builder()
-        //                             .content("Example reply message".to_owned())
-        //                             .build(),
-        //                     ))
-        //                     .build(),
-        //                 Msg::builder()
-        //                     .role(Role::BondStory)
-        //                     .body(Body::Text(
-        //                         TextValue::builder()
-        //                             .content("Example bond story message".to_owned())
-        //                             .build(),
-        //                     ))
-        //                     .build(),
-        //             ])
-        //             .build(),
-        //     ])
-        //     .build();
-        //
-        // let got: Vec<MomotalkExport> = article.try_into().into_diagnostic()?;
-        //
-        // let expected = vec![
-        //     MomotalkExport {
-        //         talk_id: 1,
-        //         talk_history: vec![
-        //             TalkHistoryItem {
-        //                 id: 1,
-        //                 name: "Her".to_owned(),
-        //                 avatar: "/path/to/image".to_owned(),
-        //                 type_: Type::Student,
-        //                 flag: 0,
-        //                 content: "Example guest message".to_owned(),
-        //             },
-        //             TalkHistoryItem {
-        //                 id: 2,
-        //                 name: "Her".to_owned(),
-        //                 avatar: "/path/to/image".to_owned(),
-        //                 type_: Type::Student,
-        //                 flag: 0,
-        //                 content: "/path/to/image".to_owned(),
-        //             },
-        //             TalkHistoryItem {
-        //                 id: 3,
-        //                 name: "sensei".to_owned(),
-        //                 avatar: String::new(),
-        //                 type_: Type::Sensei,
-        //                 flag: 0,
-        //                 content: "Example host message".to_owned(),
-        //             },
-        //             TalkHistoryItem {
-        //                 id: 4,
-        //                 name: "sensei".to_owned(),
-        //                 avatar: String::new(),
-        //                 type_: Type::Sensei,
-        //                 flag: 0,
-        //                 content: "/path/to/image".to_owned(),
-        //             },
-        //         ],
-        //         select_list: Vec::new(),
-        //     },
-        //     MomotalkExport {
-        //         talk_id: 2,
-        //         talk_history: vec![
-        //             TalkHistoryItem {
-        //                 id: 1,
-        //                 name: "systemInfo".to_owned(),
-        //                 avatar: String::new(),
-        //                 type_: Type::Message,
-        //                 flag: 0,
-        //                 content: "Example system message".to_owned(),
-        //             },
-        //             TalkHistoryItem {
-        //                 id: 2,
-        //                 name: "Reply".to_owned(),
-        //                 avatar: String::new(),
-        //                 type_: Type::Choice,
-        //                 flag: 0,
-        //                 content: "Example reply message".to_owned(),
-        //             },
-        //             TalkHistoryItem {
-        //                 id: 3,
-        //                 name: "Story Event".to_owned(),
-        //                 avatar: String::new(),
-        //                 type_: Type::Story,
-        //                 flag: 0,
-        //                 content: "Example bond story message".to_owned(),
-        //             },
-        //         ],
-        //         select_list: Vec::new(),
-        //     },
-        // ];
-        //
-        // assert_eq!(got, expected);
+        let her = Profile::builder()
+            .name("Her".to_owned())
+            .avatar(
+                ImageValue::builder()
+                    .path("/path/to/image".to_owned())
+                    .url(Some("https://example.com/image.webp".to_owned()))
+                    .build(),
+            )
+            .build()
+            .pipe(Arc::new);
+        let article = model::Article::builder()
+            .lang(model::Lang::En)
+            .pages(vec![
+                Page::builder()
+                    .msgs(vec![
+                        Msg::builder()
+                            .role(Role::Guest)
+                            .body(Body::Text(
+                                TextValue::builder()
+                                    .content("Example guest message".to_owned())
+                                    .build(),
+                            ))
+                            .profile(her.pipe_ref(Arc::clone))
+                            .build(),
+                        Msg::builder()
+                            .role(Role::Guest)
+                            .body(Body::Image(
+                                ImageValue::builder()
+                                    .path("/path/to/image.webp".to_owned())
+                                    .url(Some("https://example.com/image.webp".to_owned()))
+                                    .build(),
+                            ))
+                            .profile(her.pipe_ref(Arc::clone))
+                            .build(),
+                        Msg::builder()
+                            .role(Role::Host)
+                            .body(Body::Text(
+                                TextValue::builder()
+                                    .content("Example host message".to_owned())
+                                    .build(),
+                            ))
+                            .build(),
+                        Msg::builder()
+                            .role(Role::Host)
+                            .body(Body::Image(
+                                ImageValue::builder()
+                                    .path("/path/to/image".to_owned())
+                                    .url(Some("https://example.com/image.webp".to_owned()))
+                                    .build(),
+                            ))
+                            .build(),
+                    ])
+                    .build(),
+                Page::builder()
+                    .msgs(vec![
+                        Msg::builder()
+                            .role(Role::System)
+                            .body(Body::Text(
+                                TextValue::builder()
+                                    .content("Example system message".to_owned())
+                                    .build(),
+                            ))
+                            .build(),
+                        Msg::builder()
+                            .role(Role::Reply)
+                            .body(Body::Text(
+                                TextValue::builder()
+                                    .content("Example reply message".to_owned())
+                                    .build(),
+                            ))
+                            .build(),
+                        Msg::builder()
+                            .role(Role::BondStory)
+                            .body(Body::Text(
+                                TextValue::builder()
+                                    .content("Example bond story message".to_owned())
+                                    .build(),
+                            ))
+                            .build(),
+                    ])
+                    .build(),
+            ])
+            .build();
+
+        let got: Vec<MomotalkExport> = article.try_into().into_diagnostic()?;
+
+        let expected = vec![
+            MomotalkExport {
+                talk_id: 1,
+                talk_history: vec![
+                    TalkHistoryItem {
+                        id: 1,
+                        name: "Her".to_owned(),
+                        avatar: "https://example.com/image.webp".to_owned(),
+                        type_: Type::Student,
+                        flag: 0,
+                        content: "Example guest message".to_owned(),
+                    },
+                    TalkHistoryItem {
+                        id: 2,
+                        name: "Her".to_owned(),
+                        avatar: "https://example.com/image.webp".to_owned(),
+                        type_: Type::Student,
+                        flag: 0,
+                        content: "https://example.com/image.webp".to_owned(),
+                    },
+                    TalkHistoryItem {
+                        id: 3,
+                        name: "sensei".to_owned(),
+                        avatar: String::new(),
+                        type_: Type::Sensei,
+                        flag: 0,
+                        content: "Example host message".to_owned(),
+                    },
+                    TalkHistoryItem {
+                        id: 4,
+                        name: "sensei".to_owned(),
+                        avatar: String::new(),
+                        type_: Type::Sensei,
+                        flag: 0,
+                        content: "https://example.com/image.webp".to_owned(),
+                    },
+                ],
+                select_list: Vec::new(),
+            },
+            MomotalkExport {
+                talk_id: 2,
+                talk_history: vec![
+                    TalkHistoryItem {
+                        id: 1,
+                        name: "systemInfo".to_owned(),
+                        avatar: String::new(),
+                        type_: Type::Message,
+                        flag: 0,
+                        content: "Example system message".to_owned(),
+                    },
+                    TalkHistoryItem {
+                        id: 2,
+                        name: "Reply".to_owned(),
+                        avatar: String::new(),
+                        type_: Type::Choice,
+                        flag: 0,
+                        content: "Example reply message".to_owned(),
+                    },
+                    TalkHistoryItem {
+                        id: 3,
+                        name: "Story Event".to_owned(),
+                        avatar: String::new(),
+                        type_: Type::Story,
+                        flag: 0,
+                        content: "Example bond story message".to_owned(),
+                    },
+                ],
+                select_list: Vec::new(),
+            },
+        ];
+
+        assert_eq!(got, expected);
 
         Ok(())
     }

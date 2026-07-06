@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use getset::Getters;
 use typed_builder::TypedBuilder;
@@ -148,6 +148,13 @@ pub struct TextValue {
     pub(crate) content: String,
 }
 
+impl TextValue {
+    #[inline]
+    pub fn into_content(self) -> String {
+        self.content
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Getters, TypedBuilder)]
 pub struct ImageValue {
     #[getset(get = "pub")]
@@ -156,6 +163,19 @@ pub struct ImageValue {
     #[getset(get = "pub")]
     #[builder(default)]
     pub(crate) url: Option<String>,
+}
+
+impl ImageValue {
+    /// Returns the path.
+    /// Will try to fetch the image from URL to the path
+    /// if the file does not exist.
+    pub fn try_into_path_available(self) -> Result<PathBuf, String> {
+        todo!()
+    }
+
+    pub fn data_url(&self) -> Option<String> {
+        todo!()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Getters, TypedBuilder)]

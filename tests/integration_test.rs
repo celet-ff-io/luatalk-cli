@@ -139,46 +139,46 @@ fn check_article_raw() -> Result<()> {
 
 #[test]
 fn export_page_to_momotalk_export_json() -> Result<()> {
-    // let got = {
-    //     let talk_history: Vec<momotalk::TalkHistoryItem> = {
-    //         let lua =
-    //             Lua::new().pipe(|lua| lua.load_default_lib().into_diagnostic().map(|_| lua))?;
-    //         let chunk = include_str!("fixtures/example_Momotalk-export.lua");
-    //         let article = dto::Article::try_from_chunk(chunk, &lua)
-    //             .into_diagnostic()?
-    //             .pipe(Article::try_from)
-    //             .into_diagnostic()?;
-    //         let lang = article.lang();
-    //         article
-    //             .into_pages()
-    //             .first()
-    //             .ok_or_else(|| diagnostic!("Article has no pages"))?
-    //             .msgs()
-    //             .clone()
-    //             .into_and_lang(lang)
-    //             .try_into()
-    //             .into_diagnostic()?
-    //     };
-    //     let select_list = vec![momotalk::SelectListItem {
-    //         id: 10000,
-    //         name: "Aru".to_owned(),
-    //         avatar: "https://BlueArcbox.github.io/resources/Avatars/Kivo/Released/10000.webp"
-    //             .to_owned(),
-    //     }];
-    //     momotalk::MomotalkExport {
-    //         talk_id: 1,
-    //         talk_history,
-    //         select_list,
-    //     }
-    // }
-    // .pipe_ref(serde_json::to_value)
-    // .into_diagnostic()?;
-    //
-    // let expected = include_str!("fixtures/example_Momotalk-export.json")
-    //     .pipe(serde_json::from_str::<serde_json::Value>)
-    //     .into_diagnostic()?;
-    //
-    // assert_eq!(got, expected);
+    let got = {
+        let talk_history: Vec<momotalk::TalkHistoryItem> = {
+            let lua =
+                Lua::new().pipe(|lua| lua.load_default_lib().into_diagnostic().map(|_| lua))?;
+            let chunk = include_str!("fixtures/example_Momotalk-export.lua");
+            let article = dto::Article::try_from_chunk(chunk, &lua)
+                .into_diagnostic()?
+                .pipe(Article::try_from)
+                .into_diagnostic()?;
+            let lang = article.lang();
+            article
+                .into_pages()
+                .first()
+                .ok_or_else(|| diagnostic!("Article has no pages"))?
+                .msgs()
+                .clone()
+                .into_and_lang(lang)
+                .try_into()
+                .into_diagnostic()?
+        };
+        let select_list = vec![momotalk::SelectListItem {
+            id: 10000,
+            name: "Aru".to_owned(),
+            avatar: "https://BlueArcbox.github.io/resources/Avatars/Kivo/Released/10000.webp"
+                .to_owned(),
+        }];
+        momotalk::MomotalkExport {
+            talk_id: 1,
+            talk_history,
+            select_list,
+        }
+    }
+    .pipe_ref(serde_json::to_value)
+    .into_diagnostic()?;
+
+    let expected = include_str!("fixtures/example_Momotalk-export.json")
+        .pipe(serde_json::from_str::<serde_json::Value>)
+        .into_diagnostic()?;
+
+    assert_eq!(got, expected);
 
     Ok(())
 }
