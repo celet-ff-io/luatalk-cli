@@ -185,6 +185,10 @@ impl ImageValueExt for domain::ImageValue {
         if let Some(url) = self.url() {
             return url.clone().pipe(Ok);
         }
+        debug!(
+            "ImageValue has no URL, try to generate data URL from path: {:?}",
+            self.path()
+        );
         self.try_ensure_path()?;
         self.try_generate_data_url()?.pipe(Ok)
     }
