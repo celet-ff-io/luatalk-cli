@@ -339,12 +339,12 @@ impl App<state::Initial> {
 
     #[inline]
     fn print_example_en() {
-        Self::print_asset_str(luatalk::assets::lua::input::EXAMPLE_EN)
+        Self::print_asset_str(&luatalk::assets::lua::input::EXAMPLE_EN)
     }
 
     #[inline]
     fn print_example_zh_hans() {
-        Self::print_asset_str(luatalk::assets::lua::input::EXAMPLE_ZH_HANS)
+        Self::print_asset_str(&luatalk::assets::lua::input::EXAMPLE_ZH_HANS)
     }
 
     #[inline]
