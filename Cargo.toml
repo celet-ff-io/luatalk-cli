@@ -26,7 +26,7 @@ include-flate = "0.3.3"
 log = "0.4.33"
 miette = { version = "7.6.0", features = ["fancy"] }
 mime_guess = "2.0.5"
-mlua = { version = "0.11.6", features = [
+mlua = { version = "0.12.0", features = [
   "anyhow",
   "lua55",
   "serde",

@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use data_encoding::BASE32HEX_NOPAD;
-use mlua::{AsChunk, FromLua, Lua, LuaSerdeExt, Table, Value};
+use mlua::{FromLua, Lua, LuaSerdeExt, Table, Value, chunk::AsChunk};
 use serde::{Deserialize, Serialize};
 use tap::Pipe;
 use url::Url;

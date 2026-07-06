@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Use `mlua` version `0.12.0`.
 - Use `include-flate` to compress assets in binary.
 - **Breaking:** `ImageValue` and the structures using it
   have got `TryFrom` instead of `From` trait implementation.
