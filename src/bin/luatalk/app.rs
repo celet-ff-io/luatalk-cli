@@ -22,7 +22,7 @@ use crate::{
     cli::{
         AppArgs, AppCommand,
         do_::{InputFormatArg, OutputCommand, OutputPluralityArg},
-        generate::{self, AssetArg},
+        generate::{self, AssetArg, ExampleLangArg},
     },
     conf,
 };
@@ -119,7 +119,7 @@ impl TryFrom<AppCommand> for Action {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum GenerateAction {
-    Example,
+    Example { lang: ExampleLang },
     Completion { shell: clap_complete::Shell },
     Asset { asset: Asset },
     ConfigHelp,
@@ -128,7 +128,7 @@ enum GenerateAction {
 impl From<generate::Command> for GenerateAction {
     fn from(value: generate::Command) -> Self {
         match value {
-            generate::Command::Example => Self::Example,
+            generate::Command::Example { lang } => Self::Example { lang: lang.into() },
             generate::Command::Completion { shell } => Self::Completion { shell },
             generate::Command::Asset { asset } => Self::Asset {
                 asset: asset.into(),
@@ -139,16 +139,33 @@ impl From<generate::Command> for GenerateAction {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum ExampleLang {
+    En,
+    ZhHans,
+}
+
+impl From<ExampleLangArg> for ExampleLang {
+    fn from(value: ExampleLangArg) -> Self {
+        match value {
+            ExampleLangArg::En => Self::En,
+            ExampleLangArg::ZhHans => Self::ZhHans,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum Asset {
-    LuaInputExample,
-    LuaLibTalk,
+    InputExampleEn,
+    InputExampleZhHans,
+    LibTalk,
 }
 
 impl From<AssetArg> for Asset {
     fn from(value: AssetArg) -> Self {
         match value {
-            AssetArg::LuaInputExample => Self::LuaInputExample,
-            AssetArg::LuaLibTalk => Self::LuaLibTalk,
+            AssetArg::InputExampleEn => Self::InputExampleEn,
+            AssetArg::InputExampleZhHans => Self::InputExampleZhHans,
+            AssetArg::LibTalk => Self::LibTalk,
         }
     }
 }
@@ -226,24 +243,24 @@ impl Runnable for App<state::Initial> {
     fn run(self) -> Result<()> {
         match self.action.pipe_ref(Rc::clone).as_ref() {
             Action::Generate { action } => match action {
-                GenerateAction::Example => Self::print_example(),
+                GenerateAction::Example { lang } => match lang {
+                    ExampleLang::En => Self::print_example_en(),
+                    ExampleLang::ZhHans => Self::print_example_zh_hans(),
+                },
 
                 GenerateAction::Completion { shell } => {
-                    generate::completion(*shell, &mut io::stdout());
-                    Ok(())
+                    generate::completion(*shell, &mut io::stdout())
                 }
 
                 GenerateAction::Asset { asset } => match asset {
-                    Asset::LuaInputExample => Self::print_example(),
-                    Asset::LuaLibTalk => {
+                    Asset::InputExampleEn => Self::print_example_en(),
+                    Asset::InputExampleZhHans => Self::print_example_zh_hans(),
+                    Asset::LibTalk => {
                         Self::print_asset_str(include_str!("../../../assets/lua/lib/talk.lua"))
                     }
                 },
 
-                GenerateAction::ConfigHelp => {
-                    generate::help_config();
-                    Ok(())
-                }
+                GenerateAction::ConfigHelp => generate::help_config(),
             },
 
             Action::Do {
@@ -253,8 +270,9 @@ impl Runnable for App<state::Initial> {
                 ..
             } => self
                 .process_input(input.clone(), *input_format, *concat_pages)?
-                .run(),
+                .run()?,
         }
+        Ok(())
     }
 }
 
@@ -321,14 +339,19 @@ impl App<state::Initial> {
         .pipe(Ok)
     }
 
-    fn print_example() -> Result<()> {
-        Self::print_asset_str(include_str!("../../../assets/lua/input/example.lua"))
+    fn print_example_en() {
+        Self::print_asset_str(include_str!("../../../assets/lua/input/example_en.lua"))
+    }
+
+    fn print_example_zh_hans() {
+        Self::print_asset_str(include_str!(
+            "../../../assets/lua/input/example_zh-hans.lua"
+        ))
     }
 
     #[inline]
-    fn print_asset_str(asset_str: &str) -> Result<()> {
-        println!("{asset_str}");
-        Ok(())
+    fn print_asset_str(asset_str: &str) {
+        println!("{asset_str}")
     }
 }
 

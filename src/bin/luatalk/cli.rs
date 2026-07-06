@@ -73,8 +73,11 @@ pub mod generate {
 
     #[derive(Debug, Clone, Subcommand)]
     pub enum Command {
-        /// Example input Lua file
-        Example,
+        /// Example input Lua file.
+        Example {
+            #[arg(default_value = "en")]
+            lang: ExampleLangArg,
+        },
 
         /// Shell completion script for the specified shell.
         #[command(after_help = "e.g. `source <(luatalk generate completion bash)` \
@@ -90,14 +93,28 @@ pub mod generate {
     }
 
     #[derive(Debug, Clone, ValueEnum)]
+    pub enum ExampleLangArg {
+        /// English
+        En,
+
+        /// Simplified Chinese
+        #[value(alias("zh-Hans"))]
+        ZhHans,
+    }
+
+    #[derive(Debug, Clone, ValueEnum)]
     pub enum AssetArg {
-        /// Example input Lua file
-        #[value(name = "lua/input/example.lua")]
-        LuaInputExample,
+        /// Example input Lua file in English
+        #[value(name = "lua/input/example_en.lua")]
+        InputExampleEn,
+
+        /// Example input Lua file in Simplified Chinese
+        #[value(name = "lua/input/example_zh-hans.lua")]
+        InputExampleZhHans,
 
         /// `talk.lua` module in default lib of this program
         #[value(name = "lua/lib/talk.lua")]
-        LuaLibTalk,
+        LibTalk,
     }
 
     pub fn completion(shell: Shell, buf: &mut dyn std::io::Write) {

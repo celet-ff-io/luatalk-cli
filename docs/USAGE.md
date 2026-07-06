@@ -10,7 +10,7 @@ including how to install.
 
 ### Work with [MomoTalk Editor](https://github.com/U1805/momotalk/)
 
-1. `luatalk generate example > article.lua`
+1. `luatalk generate example en > article.lua`
   to generate your `article.lua` from example.
 
 2. Replace `her` profile avatar URL placeholder,
@@ -132,7 +132,7 @@ they are nothing different from the original files in `assets/` directory.
 
 ```bash
 # Write `example.lua` to your file
-luatalk generate example > article.lua
+luatalk generate example en > article.lua
 # Use bash completion script in this session
 source <(luatalk generate completion bash)
 # Print content of `talk.lua`

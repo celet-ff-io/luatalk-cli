@@ -9,7 +9,7 @@
 
 ### 与 [MomoTalk Editor](https://github.com/U1805/momotalk) 共同使用
 
-1. `luatalk generate example > article.lua`
+1. `luatalk generate example zh-hans > article.lua`
    来生成示例 `article.lua`。
 
 1. 将其中 `her` 的 `avatar` 的 URL 占位符 ("placeholder")
@@ -122,7 +122,7 @@ luatalk do -c example.lua json | luatalk do - momotalk -o output.json
 
 ```bash
 # Write `example.lua` to your file
-luatalk generate example > article.lua
+luatalk generate example en > article.lua
 # Use bash completion script in this session
 source <(luatalk generate completion bash)
 # Print content of `talk.lua`

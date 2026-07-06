@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Example variants in languages.
 - `path` field for the Lua class `Image`.
 - `"ko"` and `"zh-Hant"` to `lang` field.
 
