@@ -255,9 +255,7 @@ impl Runnable for App<state::Initial> {
                 GenerateAction::Asset { asset } => match asset {
                     Asset::InputExampleEn => Self::print_example_en(),
                     Asset::InputExampleZhHans => Self::print_example_zh_hans(),
-                    Asset::LibTalk => {
-                        Self::print_asset_str(include_str!("../../../assets/lua/lib/talk.lua"))
-                    }
+                    Asset::LibTalk => Self::print_asset_str(luatalk::assets::lua::lib::TALK),
                 },
 
                 GenerateAction::ConfigHelp => generate::help_config(),
@@ -339,14 +337,14 @@ impl App<state::Initial> {
         .pipe(Ok)
     }
 
+    #[inline]
     fn print_example_en() {
-        Self::print_asset_str(include_str!("../../../assets/lua/input/example_en.lua"))
+        Self::print_asset_str(luatalk::assets::lua::input::EXAMPLE_EN)
     }
 
+    #[inline]
     fn print_example_zh_hans() {
-        Self::print_asset_str(include_str!(
-            "../../../assets/lua/input/example_zh-hans.lua"
-        ))
+        Self::print_asset_str(luatalk::assets::lua::input::EXAMPLE_ZH_HANS)
     }
 
     #[inline]

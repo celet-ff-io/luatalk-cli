@@ -15,7 +15,7 @@
 //! let lua = Lua::new();
 //! lua.load_default_lib().unwrap();
 //!
-//! let chunk = include_str!("../assets/lua/input/example.lua");
+//! let chunk = luatalk::assets::lua::input::EXAMPLE_EN;
 //! let got: Article = dto::Article::try_from_chunk(chunk, &lua)
 //!     .unwrap()
 //!     .try_into()
@@ -111,6 +111,7 @@ mod error;
 mod model;
 mod talk;
 
+pub mod assets;
 pub mod net;
 
 pub use error::LuaParseError;
