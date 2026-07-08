@@ -155,17 +155,20 @@ impl From<ExampleLangArg> for ExampleLang {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum Asset {
-    InputExampleEn,
-    InputExampleZhHans,
-    LibTalk,
+    LuaInputExampleEn,
+    LuaInputExampleZhHans,
+    LuaLibTalk,
+
+    TypstOutput,
 }
 
 impl From<AssetArg> for Asset {
     fn from(value: AssetArg) -> Self {
         match value {
-            AssetArg::InputExampleEn => Self::InputExampleEn,
-            AssetArg::InputExampleZhHans => Self::InputExampleZhHans,
-            AssetArg::LibTalk => Self::LibTalk,
+            AssetArg::LuaInputExampleEn => Self::LuaInputExampleEn,
+            AssetArg::LuaInputExampleZhHans => Self::LuaInputExampleZhHans,
+            AssetArg::LuaLibTalk => Self::LuaLibTalk,
+            AssetArg::TypstOutput => Self::TypstOutput,
         }
     }
 }
@@ -253,9 +256,10 @@ impl Runnable for App<state::Initial> {
                 }
 
                 GenerateAction::Asset { asset } => match asset {
-                    Asset::InputExampleEn => Self::print_example_en(),
-                    Asset::InputExampleZhHans => Self::print_example_zh_hans(),
-                    Asset::LibTalk => Self::print_asset_str(luatalk::assets::lua::lib::TALK),
+                    Asset::LuaInputExampleEn => Self::print_example_en(),
+                    Asset::LuaInputExampleZhHans => Self::print_example_zh_hans(),
+                    Asset::LuaLibTalk => Self::print_asset_str(luatalk::assets::lua::lib::TALK),
+                    Asset::TypstOutput => Self::print_asset_str(&luatalk::assets::typst::OUTPUT),
                 },
 
                 GenerateAction::ConfigHelp => generate::help_config(),

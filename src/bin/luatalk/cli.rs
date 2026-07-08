@@ -106,15 +106,19 @@ pub mod generate {
     pub enum AssetArg {
         /// Example input Lua file in English
         #[value(name = "lua/input/example_en.lua")]
-        InputExampleEn,
+        LuaInputExampleEn,
 
         /// Example input Lua file in Simplified Chinese
         #[value(name = "lua/input/example_zh-hans.lua")]
-        InputExampleZhHans,
+        LuaInputExampleZhHans,
 
         /// `talk.lua` module in default lib of this program
         #[value(name = "lua/lib/talk.lua")]
-        LibTalk,
+        LuaLibTalk,
+
+        /// Base file for Typst output
+        #[value(name = "typst/output.typ")]
+        TypstOutput,
     }
 
     pub fn completion(shell: Shell, buf: &mut dyn std::io::Write) {

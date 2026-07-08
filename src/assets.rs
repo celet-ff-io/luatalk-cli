@@ -10,7 +10,14 @@ pub mod lua {
         flate!(pub static EXAMPLE_ZH_HANS: str from "./assets/lua/input/example_zh-hans.lua");
     }
 
+    // We need them updload quickly
     pub mod lib {
         pub const TALK: &str = include_str!("../assets/lua/lib/talk.lua");
     }
+}
+
+pub mod typst {
+    use super::*;
+
+    flate!(pub static OUTPUT: str from "./assets/typst/output.typ");
 }
