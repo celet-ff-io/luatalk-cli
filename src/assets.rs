@@ -9,10 +9,12 @@ pub mod lua {
         flate!(static EXAMPLE_EN: str from "./assets/lua/input/example_en.lua");
         flate!(static EXAMPLE_ZH_HANS: str from "./assets/lua/input/example_zh-hans.lua");
 
+        #[inline]
         pub fn example_en() -> &'static str {
             &EXAMPLE_EN
         }
 
+        #[inline]
         pub fn example_zh_hans() -> &'static str {
             &EXAMPLE_ZH_HANS
         }
@@ -34,6 +36,7 @@ pub mod typst {
 
     flate!(static OUTPUT: str from "./assets/typst/output.typ");
 
+    #[inline]
     pub fn output() -> &'static str {
         &OUTPUT
     }

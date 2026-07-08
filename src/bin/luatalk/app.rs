@@ -117,11 +117,24 @@ impl TryFrom<AppCommand> for Action {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq)]
 enum GenerateAction {
-    Example { lang: ExampleLang },
-    Completion { shell: clap_complete::Shell },
-    Asset { asset: Asset },
+    Example {
+        lang: ExampleLang,
+    },
+    Typst {
+        data: String,
+        font_size: u32,
+        width: u32,
+        font_family: String,
+        length_factor: f32,
+    },
+    Completion {
+        shell: clap_complete::Shell,
+    },
+    Asset {
+        asset: Asset,
+    },
     ConfigHelp,
 }
 
@@ -129,6 +142,19 @@ impl From<generate::Command> for GenerateAction {
     fn from(value: generate::Command) -> Self {
         match value {
             generate::Command::Example { lang } => Self::Example { lang: lang.into() },
+            generate::Command::Typst {
+                data,
+                font_size,
+                width,
+                font_family,
+                length_factor,
+            } => Self::Typst {
+                data,
+                font_size,
+                width,
+                font_family,
+                length_factor,
+            },
             generate::Command::Completion { shell } => Self::Completion { shell },
             generate::Command::Asset { asset } => Self::Asset {
                 asset: asset.into(),
@@ -250,6 +276,36 @@ impl Runnable for App<state::Initial> {
                     ExampleLang::En => Self::print_example_en(),
                     ExampleLang::ZhHans => Self::print_example_zh_hans(),
                 },
+
+                GenerateAction::Typst {
+                    data,
+                    font_size,
+                    width,
+                    font_family,
+                    length_factor,
+                } => {
+                    if *length_factor <= 0.0 {
+                        return Err(diagnostic!(
+                            "Length factor must be positive, but got: {length_factor}"
+                        )
+                        .into());
+                    }
+                    let font_family: String =
+                        font_family.pipe_as_ref(json_escape::escape_str).collect();
+                    let length_factor_percent = length_factor * 100.0;
+                    let data: String = data.pipe_as_ref(json_escape::escape_str).collect();
+                    println!("{}", luatalk::assets::typst::output());
+                    println!(
+                        "#set text({font_size}pt)
+#article-render(
+  width: {width}pt,
+  font: \"{font_family}\",
+  length-factor: {length_factor_percent}%,
+  json(\"{data}\"),
+)
+"
+                    );
+                }
 
                 GenerateAction::Completion { shell } => {
                     generate::completion(*shell, &mut io::stdout())

@@ -717,6 +717,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "json-escape"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef6fd1644b881a0cb8030578c318e14840e543876e98f7bc9215270fd55ca5db"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "konst"
 version = "0.2.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -821,6 +830,7 @@ dependencies = [
  "env_logger",
  "getset",
  "include-flate",
+ "json-escape",
  "log",
  "miette",
  "mime_guess",

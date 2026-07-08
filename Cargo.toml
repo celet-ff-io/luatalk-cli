@@ -23,6 +23,7 @@ data-encoding = "2.11.0"
 env_logger = "0.11.11"
 getset = "0.1.7"
 include-flate = "0.3.3"
+json-escape = "0.3.1"
 log = "0.4.33"
 miette = { version = "7.6.0", features = ["fancy"] }
 mime_guess = "2.0.5"

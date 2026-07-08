@@ -67,7 +67,7 @@ pub enum AppCommand {
 }
 
 pub mod generate {
-    use std::io::{IsTerminal, stdout};
+    use std::io::{self, IsTerminal};
 
     use super::*;
 
@@ -77,6 +77,29 @@ pub mod generate {
         Example {
             #[arg(default_value = "en")]
             lang: ExampleLangArg,
+        },
+
+        /// Generate a Typst file to render article, from the base Typst file in asset.
+        Typst {
+            /// File path of article data in JSON format, from `do <INPUT> json`.
+            #[arg(long, default_value = "output.json")]
+            data: String,
+
+            /// Font size in points.
+            #[arg(long, default_value_t = 20)]
+            font_size: u32,
+
+            /// Page width in points
+            #[arg(long, default_value_t = 720)]
+            width: u32,
+
+            /// Font family name to use.
+            #[arg(long, default_value = "BlueakaBetaGBK")]
+            font_family: String,
+
+            /// Length factor for zooming all elements in the page.
+            #[arg(long, default_value_t = 1.0)]
+            length_factor: f32,
         },
 
         /// Shell completion script for the specified shell.
@@ -131,7 +154,7 @@ pub mod generate {
         let l;
         let p;
         let r;
-        if stdout().is_terminal() {
+        if io::stdout().is_terminal() {
             let styles = styles();
             h = styles.get_header().render().to_string();
             l = styles.get_literal().render().to_string();

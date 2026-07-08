@@ -13,7 +13,7 @@
 /// The author of this file claims NO ownership over the underlying design artwork
 /// and assumes NO liability for any copyright issues arising from it.
 ///
-/// Version 0.1.1
+/// Version 0.1.2
 
 // ====================
 // Function definitions
@@ -367,10 +367,10 @@
 }
 
 /// May be the only function you need to call
-#let article-render(width: 720pt, font: _default-font, length-factor: 100%, article) = {
+#let article-render(width: 720pt, font: _default-font, length-factor: 100%, data) = {
   set page(width: width, height: auto)
-  let lang = article.lang
-  let pages = article.pages.map(page => {
+  let lang = data.lang
+  let pages = data.pages.map(page => {
     let body-content(body) = {
       let (type, value) = body
       if type == "text" {
@@ -439,7 +439,7 @@
 // Example
 //
 // // Your article data in JSON format, output from LuaTalk.
-// #let article = json("output.json")
+// #let data = json("output.json")
 // // Text base size;
 // // Our code above is using `em` and the actual size of text is base on your setting here.
 // #set text(20pt)
@@ -453,8 +453,8 @@
 // #let length-factor = 100%
 //
 // #article-render(
-//   article,
 //   width: width,
 //   font: font,
 //   length-factor: length-factor,
+//   data,
 // )
