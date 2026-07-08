@@ -6,8 +6,14 @@
 /// for more information about LuaTalk.
 ///
 /// Copyright (c) 2026-present celet-ff-io
-/// Licensed under the MIT License or the Apache License 2.0
-/// Version 0.1.0
+/// Licensed under the MIT License or the Apache License 2.0.
+/// The visual design of this file is inspired
+/// by the website `https://u1805.github.io/momotalk`,
+/// created by `https://github.com/U1805`.
+/// The author of this file claims NO ownership over the underlying design artwork
+/// and assumes NO liability for any copyright issues arising from it.
+///
+/// Version 0.1.1
 
 // ====================
 // Function definitions
@@ -443,7 +449,7 @@
 // // You may download font you want to use and make `typst` able to find it.
 // // #let font = "Noto Sans" // An example fallback font if you do not get the following one
 // #let font = "BlueakaBetaGBK"
-// // Length factor, for zooming allow elements
+// // Length factor, for zooming all elements in the page.
 // #let length-factor = 100%
 //
 // #article-render(
