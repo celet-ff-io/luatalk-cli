@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Base Typst output file `output.typ` to assets.
 
+### Changed
+
+- **Breaking:** Use getters instead of direct access to constant strings in `luatalk::assets`.
+
 ## [0.3.0-alpha.3] - 2026-07-07
 
 ### Added

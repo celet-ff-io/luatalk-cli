@@ -6,18 +6,35 @@ pub mod lua {
     pub mod input {
         use super::*;
 
-        flate!(pub static EXAMPLE_EN: str from "./assets/lua/input/example_en.lua");
-        flate!(pub static EXAMPLE_ZH_HANS: str from "./assets/lua/input/example_zh-hans.lua");
+        flate!(static EXAMPLE_EN: str from "./assets/lua/input/example_en.lua");
+        flate!(static EXAMPLE_ZH_HANS: str from "./assets/lua/input/example_zh-hans.lua");
+
+        pub fn example_en() -> &'static str {
+            &EXAMPLE_EN
+        }
+
+        pub fn example_zh_hans() -> &'static str {
+            &EXAMPLE_ZH_HANS
+        }
     }
 
     // We need them updload quickly
     pub mod lib {
-        pub const TALK: &str = include_str!("../assets/lua/lib/talk.lua");
+        const TALK: &str = include_str!("../assets/lua/lib/talk.lua");
+
+        #[inline]
+        pub fn talk() -> &'static str {
+            TALK
+        }
     }
 }
 
 pub mod typst {
     use super::*;
 
-    flate!(pub static OUTPUT: str from "./assets/typst/output.typ");
+    flate!(static OUTPUT: str from "./assets/typst/output.typ");
+
+    pub fn output() -> &'static str {
+        &OUTPUT
+    }
 }

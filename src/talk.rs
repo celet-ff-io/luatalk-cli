@@ -23,7 +23,7 @@ impl LuaExt for Lua {
         const LMOD_TALK: &str = "talk";
 
         let lib_module: Value = self
-            .load(crate::assets::lua::lib::TALK)
+            .load(crate::assets::lua::lib::talk())
             .set_name(formatcp!("{LMOD_TALK}.lua"))
             .eval()
             .map_err(LuaParseError::Eval)

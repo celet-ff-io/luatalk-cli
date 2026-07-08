@@ -258,8 +258,8 @@ impl Runnable for App<state::Initial> {
                 GenerateAction::Asset { asset } => match asset {
                     Asset::LuaInputExampleEn => Self::print_example_en(),
                     Asset::LuaInputExampleZhHans => Self::print_example_zh_hans(),
-                    Asset::LuaLibTalk => Self::print_asset_str(luatalk::assets::lua::lib::TALK),
-                    Asset::TypstOutput => Self::print_asset_str(&luatalk::assets::typst::OUTPUT),
+                    Asset::LuaLibTalk => Self::print_asset_str(luatalk::assets::lua::lib::talk()),
+                    Asset::TypstOutput => Self::print_asset_str(luatalk::assets::typst::output()),
                 },
 
                 GenerateAction::ConfigHelp => generate::help_config(),
@@ -343,12 +343,12 @@ impl App<state::Initial> {
 
     #[inline]
     fn print_example_en() {
-        Self::print_asset_str(&luatalk::assets::lua::input::EXAMPLE_EN)
+        Self::print_asset_str(luatalk::assets::lua::input::example_en())
     }
 
     #[inline]
     fn print_example_zh_hans() {
-        Self::print_asset_str(&luatalk::assets::lua::input::EXAMPLE_ZH_HANS)
+        Self::print_asset_str(luatalk::assets::lua::input::example_zh_hans())
     }
 
     #[inline]
