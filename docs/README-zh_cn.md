@@ -8,7 +8,6 @@
 ## TODO
 
 - 支持导出为 Typst 代码，以便逐页渲染为图片。
-- 为`generate` 子命令添加 `license`。
 
 ## 特性
 

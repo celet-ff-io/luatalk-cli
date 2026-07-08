@@ -113,6 +113,9 @@ pub mod generate {
 
         /// Help about advanced configuration of this program
         ConfigHelp,
+
+        /// Show license information of this program and its dependencies.
+        License { license: LicenseArg },
     }
 
     #[derive(Debug, Clone, ValueEnum)]
@@ -130,11 +133,9 @@ pub mod generate {
         /// Example input Lua file in English
         #[value(name = "lua/input/example_en.lua")]
         LuaInputExampleEn,
-
         /// Example input Lua file in Simplified Chinese
         #[value(name = "lua/input/example_zh-hans.lua")]
         LuaInputExampleZhHans,
-
         /// `talk.lua` module in default lib of this program
         #[value(name = "lua/lib/talk.lua")]
         LuaLibTalk,
@@ -142,6 +143,23 @@ pub mod generate {
         /// Base file for Typst output
         #[value(name = "typst/output.typ")]
         TypstOutput,
+
+        #[value(name = "license/NOTICE")]
+        LicenseNotice,
+        #[value(name = "license/LICENSE-APACHE")]
+        LicenseApache,
+        #[value(name = "license/LICENSE-MIT")]
+        LicenseMit,
+        #[value(name = "license/license.html")]
+        LicenseHtml,
+    }
+
+    #[derive(Debug, Clone, ValueEnum)]
+    pub enum LicenseArg {
+        Notice,
+        Apache,
+        Mit,
+        ThirdPartyLicenses,
     }
 
     pub fn completion(shell: Shell, buf: &mut dyn std::io::Write) {

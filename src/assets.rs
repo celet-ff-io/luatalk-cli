@@ -41,3 +41,32 @@ pub mod typst {
         &OUTPUT
     }
 }
+
+pub mod license {
+    use super::*;
+
+    flate!(static NOTICE: str from "./assets/license/NOTICE");
+    flate!(static LICENSE_APACHE: str from "./assets/license/LICENSE-APACHE");
+    flate!(static LICENSE_MIT: str from "./assets/license/LICENSE-MIT");
+    flate!(static LICENSE_HTML: str from "./assets/license/license.html");
+
+    #[inline]
+    pub fn notice() -> &'static str {
+        &NOTICE
+    }
+
+    #[inline]
+    pub fn license_apache() -> &'static str {
+        &LICENSE_APACHE
+    }
+
+    #[inline]
+    pub fn license_mit() -> &'static str {
+        &LICENSE_MIT
+    }
+
+    #[inline]
+    pub fn license_html() -> &'static str {
+        &LICENSE_HTML
+    }
+}

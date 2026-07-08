@@ -9,7 +9,6 @@ Build article from Lua file.
 
 - Make article exportable to Typst code
   to make it easy to render as pictures page by page.
-- Add `license` for `generate` subcommand.
 
 ## Features
 

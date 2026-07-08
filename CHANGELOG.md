@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add `generate typst` subcommand.
 - Base Typst output file `output.typ` to assets.
+- `generate license` subcommand.
 
 ### Changed
 

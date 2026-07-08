@@ -22,7 +22,7 @@ use crate::{
     cli::{
         AppArgs, AppCommand,
         do_::{InputFormatArg, OutputCommand, OutputPluralityArg},
-        generate::{self, AssetArg, ExampleLangArg},
+        generate::{self, AssetArg, ExampleLangArg, LicenseArg},
     },
     conf,
 };
@@ -136,6 +136,9 @@ enum GenerateAction {
         asset: Asset,
     },
     ConfigHelp,
+    License {
+        license: License,
+    },
 }
 
 impl From<generate::Command> for GenerateAction {
@@ -160,6 +163,9 @@ impl From<generate::Command> for GenerateAction {
                 asset: asset.into(),
             },
             generate::Command::ConfigHelp => Self::ConfigHelp,
+            generate::Command::License { license } => Self::License {
+                license: license.into(),
+            },
         }
     }
 }
@@ -186,6 +192,11 @@ enum Asset {
     LuaLibTalk,
 
     TypstOutput,
+
+    LicenseNotice,
+    LicenseApache,
+    LicenseMit,
+    LicenseHtml,
 }
 
 impl From<AssetArg> for Asset {
@@ -195,6 +206,29 @@ impl From<AssetArg> for Asset {
             AssetArg::LuaInputExampleZhHans => Self::LuaInputExampleZhHans,
             AssetArg::LuaLibTalk => Self::LuaLibTalk,
             AssetArg::TypstOutput => Self::TypstOutput,
+            AssetArg::LicenseNotice => Self::LicenseNotice,
+            AssetArg::LicenseApache => Self::LicenseApache,
+            AssetArg::LicenseMit => Self::LicenseMit,
+            AssetArg::LicenseHtml => Self::LicenseHtml,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum License {
+    Notice,
+    Apache,
+    Mit,
+    ThirdPartyLicenses,
+}
+
+impl From<LicenseArg> for License {
+    fn from(value: LicenseArg) -> Self {
+        match value {
+            LicenseArg::Notice => Self::Notice,
+            LicenseArg::Apache => Self::Apache,
+            LicenseArg::Mit => Self::Mit,
+            LicenseArg::ThirdPartyLicenses => Self::ThirdPartyLicenses,
         }
     }
 }
@@ -273,8 +307,12 @@ impl Runnable for App<state::Initial> {
         match self.action.pipe_ref(Rc::clone).as_ref() {
             Action::Generate { action } => match action {
                 GenerateAction::Example { lang } => match lang {
-                    ExampleLang::En => Self::print_example_en(),
-                    ExampleLang::ZhHans => Self::print_example_zh_hans(),
+                    ExampleLang::En => {
+                        Self::print_asset_str(luatalk::assets::lua::input::example_en())
+                    }
+                    ExampleLang::ZhHans => {
+                        Self::print_asset_str(luatalk::assets::lua::input::example_zh_hans())
+                    }
                 },
 
                 GenerateAction::Typst {
@@ -312,13 +350,40 @@ impl Runnable for App<state::Initial> {
                 }
 
                 GenerateAction::Asset { asset } => match asset {
-                    Asset::LuaInputExampleEn => Self::print_example_en(),
-                    Asset::LuaInputExampleZhHans => Self::print_example_zh_hans(),
+                    Asset::LuaInputExampleEn => {
+                        Self::print_asset_str(luatalk::assets::lua::input::example_en())
+                    }
+                    Asset::LuaInputExampleZhHans => {
+                        Self::print_asset_str(luatalk::assets::lua::input::example_zh_hans())
+                    }
                     Asset::LuaLibTalk => Self::print_asset_str(luatalk::assets::lua::lib::talk()),
                     Asset::TypstOutput => Self::print_asset_str(luatalk::assets::typst::output()),
+                    Asset::LicenseNotice => {
+                        Self::print_asset_str(luatalk::assets::license::notice())
+                    }
+                    Asset::LicenseApache => {
+                        Self::print_asset_str(luatalk::assets::license::license_apache())
+                    }
+                    Asset::LicenseMit => {
+                        Self::print_asset_str(luatalk::assets::license::license_mit())
+                    }
+                    Asset::LicenseHtml => {
+                        Self::print_asset_str(luatalk::assets::license::license_html())
+                    }
                 },
 
                 GenerateAction::ConfigHelp => generate::help_config(),
+
+                GenerateAction::License { license } => match license {
+                    License::Notice => Self::print_asset_str(luatalk::assets::license::notice()),
+                    License::Apache => {
+                        Self::print_asset_str(luatalk::assets::license::license_apache())
+                    }
+                    License::Mit => Self::print_asset_str(luatalk::assets::license::license_mit()),
+                    License::ThirdPartyLicenses => {
+                        Self::print_asset_str(luatalk::assets::license::license_html())
+                    }
+                },
             },
 
             Action::Do {
@@ -395,16 +460,6 @@ impl App<state::Initial> {
             action: self.action,
         }
         .pipe(Ok)
-    }
-
-    #[inline]
-    fn print_example_en() {
-        Self::print_asset_str(luatalk::assets::lua::input::example_en())
-    }
-
-    #[inline]
-    fn print_example_zh_hans() {
-        Self::print_asset_str(luatalk::assets::lua::input::example_zh_hans())
     }
 
     #[inline]
