@@ -94,7 +94,8 @@ pub mod generate {
             width: u32,
 
             /// Font family name to use.
-            #[arg(long, default_value = "BlueakaBetaGBK")]
+            /// e.g. "Noto Sans" or "BlueakaBetaGBK"
+            #[arg(long, default_value = "Noto Sans")]
             font_family: String,
 
             /// Length factor for zooming all elements in the page.

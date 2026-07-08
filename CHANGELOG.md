@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Patch `output.typ`.
+
 ## [0.3.0-alpha.4] - 2026-07-08
 
 ### Added

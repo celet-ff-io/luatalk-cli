@@ -1,6 +1,6 @@
 [package]
 name = "luatalk-cli"
-version = "0.3.0-alpha.4"
+version = "0.3.0-alpha.5"
 authors = ["celet-ff-io"]
 edition = "2024"
 rust-version = "1.92"

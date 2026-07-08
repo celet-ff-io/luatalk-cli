@@ -13,7 +13,7 @@
 /// The author of this file claims NO ownership over the underlying design artwork
 /// and assumes NO liability for any copyright issues arising from it.
 ///
-/// Version 0.1.2
+/// Version 0.1.3
 
 // ====================
 // Function definitions
@@ -31,7 +31,7 @@
   }
 }
 
-// Should be a sans font at least
+// Should be a sans font
 #let _default-font = "Noto Sans"
 
 #let _text-bubble(
@@ -262,7 +262,6 @@
           fill: button-text-color,
           size: length-unit,
           font: font,
-          weight: "bold",
           align(center, line),
         ),
       ),
@@ -447,8 +446,8 @@
 // #let width = 720pt
 // // Set font family you want to use.
 // // You may download font you want to use and make `typst` able to find it.
-// // #let font = "Noto Sans" // An example fallback font if you do not get the following one
-// #let font = "BlueakaBetaGBK"
+// #let font = "Noto Sans"
+// // #let font = "BlueakaBetaGBK" // Alternative
 // // Length factor, for zooming all elements in the page.
 // #let length-factor = 100%
 //
