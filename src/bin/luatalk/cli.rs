@@ -42,6 +42,10 @@ pub struct AppArgs {
 pub enum AppCommand {
     /// Output useful files at runtime or hard-coded in the binary.
     Generate {
+        /// Output file. Defaults to stdout.
+        #[arg(global = true, short, long, default_value = "-")]
+        output: FileOrStdout,
+
         #[command(subcommand)]
         command: generate::Command,
     },
@@ -235,7 +239,7 @@ pub mod do_ {
         /// Output both dumped JSON file and Typst file for rendering the article.
         /// This action is like a combination of
         /// `do json -o "<STEM>.json"`
-        /// and `generate typst [OPTIONS] <STEM>.json > <STEM>.typ`.
+        /// and `generate typst [OPTIONS] <STEM>.json -o <STEM>.typ`.
         Typst {
             /// Ouptut path incompleted, ends with file stem. Defaults to None.
             /// which stands for being same as stem portion of input file name.

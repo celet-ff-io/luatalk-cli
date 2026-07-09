@@ -15,7 +15,7 @@ use mlua::Lua;
 use regex::Regex;
 use tap::{Pipe, Tap};
 
-use luatalk::{Article, InLang, IntoAndLang, LuaExt, dto, momotalk};
+use luatalk::{Article, InLang, IntoAndLang, LuaExt, assets, dto, momotalk};
 
 use crate::{
     app::state::State,
@@ -45,6 +45,7 @@ pub struct App<S: State> {
 #[derive(Debug, Clone)]
 enum Action {
     Generate {
+        output: FileOrStdout,
         action: GenerateAction,
     },
 
@@ -61,7 +62,8 @@ impl TryFrom<AppCommand> for Action {
 
     fn try_from(value: AppCommand) -> Result<Self, Self::Error> {
         match value {
-            AppCommand::Generate { command } => Self::Generate {
+            AppCommand::Generate { output, command } => Self::Generate {
+                output,
                 action: command.into(),
             },
 
@@ -330,7 +332,7 @@ impl TryFrom<AppArgs> for App<state::Initial> {
 
 impl<S: state::State> App<S> {
     /// * `data` - **File path** of a JSON file
-    fn ouput_typst_to_writer<W: Write>(
+    fn output_typst<W: Write>(
         writer: &mut W,
         data: &str,
         config: &TypstOutputConfig,
@@ -349,7 +351,7 @@ impl<S: state::State> App<S> {
         let font_family: String = font_family.pipe_as_ref(json_escape::escape_str).collect();
         let length_factor_percent = length_factor * 100.0;
         let data: String = data.pipe(json_escape::escape_str).collect();
-        writeln!(writer, "{}", luatalk::assets::typst::output()).into_diagnostic()?;
+        writeln!(writer, "{}", assets::typst::output()).into_diagnostic()?;
         writeln!(
             writer,
             "#set text({font_size}pt)
@@ -370,60 +372,50 @@ impl<S: state::State> App<S> {
 impl Runnable for App<state::Initial> {
     fn run(self) -> Result<()> {
         match self.action.pipe_ref(Rc::clone).as_ref() {
-            Action::Generate { action } => match action {
-                GenerateAction::Example { lang } => match lang {
-                    ExampleLang::En => {
-                        Self::print_asset_str(luatalk::assets::lua::input::example_en())
-                    }
-                    ExampleLang::ZhHans => {
-                        Self::print_asset_str(luatalk::assets::lua::input::example_zh_hans())
-                    }
-                },
+            Action::Generate { output, action } => {
+                let mut w = output.clone_to_ouptut_writer()?;
+                match action {
+                    GenerateAction::Example { lang } => match lang {
+                        ExampleLang::En => w.ouput_str(assets::lua::input::example_en())?,
 
-                GenerateAction::Typst { data, config } => {
-                    Self::ouput_typst_to_writer(&mut stdout(), data, config)?
+                        ExampleLang::ZhHans => w.ouput_str(assets::lua::input::example_zh_hans())?,
+                    },
+
+                    GenerateAction::Typst { data, config } => {
+                        Self::output_typst(&mut stdout(), data, config)?
+                    }
+
+                    GenerateAction::Completion { shell } => {
+                        generate::completion(*shell, &mut io::stdout())
+                    }
+
+                    GenerateAction::Asset { asset } => match asset {
+                        Asset::LuaInputExampleEn => w.ouput_str(assets::lua::input::example_en())?,
+                        Asset::LuaInputExampleZhHans => {
+                            w.ouput_str(assets::lua::input::example_zh_hans())?
+                        }
+                        Asset::LuaLibTalk => w.ouput_str(assets::lua::lib::talk())?,
+
+                        Asset::TypstOutput => w.ouput_str(assets::typst::output())?,
+
+                        Asset::LicenseNotice => w.ouput_str(assets::license::notice())?,
+                        Asset::LicenseApache => w.ouput_str(assets::license::license_apache())?,
+                        Asset::LicenseMit => w.ouput_str(assets::license::license_mit())?,
+                        Asset::LicenseHtml => w.ouput_str(assets::license::license_html())?,
+                    },
+
+                    GenerateAction::ConfigHelp => generate::help_config(),
+
+                    GenerateAction::License { license } => match license {
+                        License::Notice => w.ouput_str(assets::license::notice())?,
+                        License::Apache => w.ouput_str(assets::license::license_apache())?,
+                        License::Mit => w.ouput_str(assets::license::license_mit())?,
+                        License::ThirdPartyLicenses => {
+                            w.ouput_str(assets::license::license_html())?
+                        }
+                    },
                 }
-
-                GenerateAction::Completion { shell } => {
-                    generate::completion(*shell, &mut io::stdout())
-                }
-
-                GenerateAction::Asset { asset } => match asset {
-                    Asset::LuaInputExampleEn => {
-                        Self::print_asset_str(luatalk::assets::lua::input::example_en())
-                    }
-                    Asset::LuaInputExampleZhHans => {
-                        Self::print_asset_str(luatalk::assets::lua::input::example_zh_hans())
-                    }
-                    Asset::LuaLibTalk => Self::print_asset_str(luatalk::assets::lua::lib::talk()),
-                    Asset::TypstOutput => Self::print_asset_str(luatalk::assets::typst::output()),
-                    Asset::LicenseNotice => {
-                        Self::print_asset_str(luatalk::assets::license::notice())
-                    }
-                    Asset::LicenseApache => {
-                        Self::print_asset_str(luatalk::assets::license::license_apache())
-                    }
-                    Asset::LicenseMit => {
-                        Self::print_asset_str(luatalk::assets::license::license_mit())
-                    }
-                    Asset::LicenseHtml => {
-                        Self::print_asset_str(luatalk::assets::license::license_html())
-                    }
-                },
-
-                GenerateAction::ConfigHelp => generate::help_config(),
-
-                GenerateAction::License { license } => match license {
-                    License::Notice => Self::print_asset_str(luatalk::assets::license::notice()),
-                    License::Apache => {
-                        Self::print_asset_str(luatalk::assets::license::license_apache())
-                    }
-                    License::Mit => Self::print_asset_str(luatalk::assets::license::license_mit()),
-                    License::ThirdPartyLicenses => {
-                        Self::print_asset_str(luatalk::assets::license::license_html())
-                    }
-                },
-            },
+            }
 
             Action::Do {
                 input,
@@ -500,10 +492,16 @@ impl App<state::Initial> {
         }
         .pipe(Ok)
     }
+}
 
-    #[inline]
-    fn print_asset_str(asset_str: &str) {
-        println!("{asset_str}")
+trait WriteExt {
+    fn ouput_str(&mut self, s: &str) -> Result<()>;
+}
+
+impl<W: Write> WriteExt for W {
+    fn ouput_str(&mut self, s: &str) -> Result<()> {
+        writeln!(self, "{s}").into_diagnostic()?;
+        self.flush().into_diagnostic()
     }
 }
 
@@ -513,7 +511,9 @@ impl Runnable for App<state::OfArticle> {
             Action::Do { output, .. } => match output {
                 OutputAction::Show { output } => self.output_show(output),
                 OutputAction::Json { output } => self.output_json(output),
-                OutputAction::Typst { stem, config } => self.output_typst(stem.as_ref(), config),
+                OutputAction::Typst { stem, config } => {
+                    self.output_typst_and_json(stem.as_ref(), config)
+                }
                 OutputAction::Momotalk { output, plurality } => {
                     self.output_momotalk(output.as_ref(), plurality)
                 }
@@ -539,7 +539,11 @@ impl App<state::OfArticle> {
     }
 
     #[inline]
-    fn output_typst(self, stem: Option<&String>, config: &TypstOutputConfig) -> Result<()> {
+    fn output_typst_and_json(
+        self,
+        stem: Option<&String>,
+        config: &TypstOutputConfig,
+    ) -> Result<()> {
         let stem = stem.cloned().unwrap_or_else(|| {
             self.state
                 .input
@@ -556,7 +560,7 @@ impl App<state::OfArticle> {
         {
             let path = stem.pipe_ref(Path::new).with_extension("typ");
             let (_, mut writer) = path.to_named_writer()?;
-            Self::ouput_typst_to_writer(&mut writer, &data_path_str, config)?;
+            Self::output_typst(&mut writer, &data_path_str, config)?;
         }
         Ok(())
     }
