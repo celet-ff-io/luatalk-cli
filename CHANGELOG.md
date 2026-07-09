@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `do <INPUT> typst` to generate Typst code and JSON at one time.
+  `--stem` to specify the output file name stem.
+  Also shares the options of `generate typst` subcommand.
+
+### Changed
+
+- **Breaking:** Make `--data` in `generate typst --data` a positional argument
+  with default value instead of an option.
+
 ### Fixed
 
 - Patch `output.typ`.

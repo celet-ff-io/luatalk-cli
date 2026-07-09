@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     fs,
-    io::{self, Write},
+    io::{self, Write, stdout},
     path::{Path, PathBuf},
     rc::Rc,
     str::FromStr,
@@ -96,15 +96,7 @@ impl TryFrom<AppCommand> for Action {
                         }
                     }
                 };
-                let output = match output_commands {
-                    OutputCommand::Show { output } => OutputAction::Show { output },
-                    OutputCommand::Json { output } => OutputAction::Json { output },
-                    OutputCommand::Momotalk { output, pl } => OutputAction::Momotalk {
-                        output,
-                        plurality: pl.into(),
-                    },
-                };
-
+                let output = output_commands.into();
                 Self::Do {
                     input,
                     input_format,
@@ -124,10 +116,7 @@ enum GenerateAction {
     },
     Typst {
         data: String,
-        font_size: u32,
-        width: u32,
-        font_family: String,
-        length_factor: f32,
+        config: TypstOutputConfig,
     },
     Completion {
         shell: clap_complete::Shell,
@@ -145,18 +134,9 @@ impl From<generate::Command> for GenerateAction {
     fn from(value: generate::Command) -> Self {
         match value {
             generate::Command::Example { lang } => Self::Example { lang: lang.into() },
-            generate::Command::Typst {
+            generate::Command::Typst { data, config } => Self::Typst {
                 data,
-                font_size,
-                width,
-                font_family,
-                length_factor,
-            } => Self::Typst {
-                data,
-                font_size,
-                width,
-                font_family,
-                length_factor,
+                config: config.into(),
             },
             generate::Command::Completion { shell } => Self::Completion { shell },
             generate::Command::Asset { asset } => Self::Asset {
@@ -181,6 +161,31 @@ impl From<ExampleLangArg> for ExampleLang {
         match value {
             ExampleLangArg::En => Self::En,
             ExampleLangArg::ZhHans => Self::ZhHans,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct TypstOutputConfig {
+    font_size: u32,
+    width: u32,
+    font_family: String,
+    length_factor: f32,
+}
+
+impl From<generate::TypstOutputConfigArgs> for TypstOutputConfig {
+    fn from(value: generate::TypstOutputConfigArgs) -> Self {
+        let generate::TypstOutputConfigArgs {
+            font_size,
+            width,
+            font_family,
+            length_factor,
+        } = value;
+        Self {
+            font_size,
+            width,
+            font_family,
+            length_factor,
         }
     }
 }
@@ -258,10 +263,31 @@ enum OutputAction {
     Json {
         output: FileOrStdout,
     },
+    Typst {
+        stem: Option<String>,
+        config: TypstOutputConfig,
+    },
     Momotalk {
         output: Option<FileOrStdout>,
         plurality: OutputPlurality,
     },
+}
+
+impl From<OutputCommand> for OutputAction {
+    fn from(value: OutputCommand) -> Self {
+        match value {
+            OutputCommand::Show { output } => Self::Show { output },
+            OutputCommand::Json { output } => Self::Json { output },
+            OutputCommand::Typst { stem, config } => Self::Typst {
+                stem,
+                config: config.into(),
+            },
+            OutputCommand::Momotalk { output, pl } => Self::Momotalk {
+                output,
+                plurality: pl.into(),
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
@@ -302,6 +328,45 @@ impl TryFrom<AppArgs> for App<state::Initial> {
     }
 }
 
+impl<S: state::State> App<S> {
+    /// * `data` - **File path** of a JSON file
+    fn ouput_typst_to_writer<W: Write>(
+        writer: &mut W,
+        data: &str,
+        config: &TypstOutputConfig,
+    ) -> Result<()> {
+        let TypstOutputConfig {
+            font_size,
+            width,
+            font_family,
+            length_factor,
+        } = config;
+        if *length_factor <= 0.0 {
+            return Err(
+                diagnostic!("Length factor must be positive, but got: {length_factor}").into(),
+            );
+        }
+        let font_family: String = font_family.pipe_as_ref(json_escape::escape_str).collect();
+        let length_factor_percent = length_factor * 100.0;
+        let data: String = data.pipe(json_escape::escape_str).collect();
+        writeln!(writer, "{}", luatalk::assets::typst::output()).into_diagnostic()?;
+        writeln!(
+            writer,
+            "#set text({font_size}pt)
+#article-render(
+  width: {width}pt,
+  font: \"{font_family}\",
+  length-factor: {length_factor_percent}%,
+  json(\"{data}\"),
+)
+"
+        )
+        .into_diagnostic()?;
+        writer.flush().into_diagnostic()?;
+        Ok(())
+    }
+}
+
 impl Runnable for App<state::Initial> {
     fn run(self) -> Result<()> {
         match self.action.pipe_ref(Rc::clone).as_ref() {
@@ -315,34 +380,8 @@ impl Runnable for App<state::Initial> {
                     }
                 },
 
-                GenerateAction::Typst {
-                    data,
-                    font_size,
-                    width,
-                    font_family,
-                    length_factor,
-                } => {
-                    if *length_factor <= 0.0 {
-                        return Err(diagnostic!(
-                            "Length factor must be positive, but got: {length_factor}"
-                        )
-                        .into());
-                    }
-                    let font_family: String =
-                        font_family.pipe_as_ref(json_escape::escape_str).collect();
-                    let length_factor_percent = length_factor * 100.0;
-                    let data: String = data.pipe_as_ref(json_escape::escape_str).collect();
-                    println!("{}", luatalk::assets::typst::output());
-                    println!(
-                        "#set text({font_size}pt)
-#article-render(
-  width: {width}pt,
-  font: \"{font_family}\",
-  length-factor: {length_factor_percent}%,
-  json(\"{data}\"),
-)
-"
-                    );
+                GenerateAction::Typst { data, config } => {
+                    Self::ouput_typst_to_writer(&mut stdout(), data, config)?
                 }
 
                 GenerateAction::Completion { shell } => {
@@ -474,6 +513,7 @@ impl Runnable for App<state::OfArticle> {
             Action::Do { output, .. } => match output {
                 OutputAction::Show { output } => self.output_show(output),
                 OutputAction::Json { output } => self.output_json(output),
+                OutputAction::Typst { stem, config } => self.output_typst(stem.as_ref(), config),
                 OutputAction::Momotalk { output, plurality } => {
                     self.output_momotalk(output.as_ref(), plurality)
                 }
@@ -496,6 +536,29 @@ impl App<state::OfArticle> {
     fn output_json(self, output: &FileOrStdout) -> Result<()> {
         let article: dto::Article = self.state.article.into();
         Self::output_json_to_writer(&mut output.clone_to_ouptut_writer()?, &article)
+    }
+
+    #[inline]
+    fn output_typst(self, stem: Option<&String>, config: &TypstOutputConfig) -> Result<()> {
+        let stem = stem.cloned().unwrap_or_else(|| {
+            self.state
+                .input
+                .filename_or_default(DEFAULT_OUTPUTNAME)
+                .unwrap_or_else(|_| DEFAULT_OUTPUTNAME.to_owned())
+        });
+        let data_path_str = {
+            let article: dto::Article = self.state.article.into();
+            let path = stem.pipe_ref(Path::new).with_extension("json");
+            let (path_str, mut writer) = path.to_named_writer()?;
+            Self::output_json_to_writer(&mut writer, &article)?;
+            path_str
+        };
+        {
+            let path = stem.pipe_ref(Path::new).with_extension("typ");
+            let (_, mut writer) = path.to_named_writer()?;
+            Self::ouput_typst_to_writer(&mut writer, &data_path_str, config)?;
+        }
+        Ok(())
     }
 
     #[inline]
@@ -662,6 +725,23 @@ impl App<state::OfArticle> {
             .into_diagnostic()
             .wrap_err_with(|| format!("Failed to create output file: {path_display}"))?;
         Self::output_json_to_writer(&mut writer, &momotalk_export)
+    }
+}
+
+trait PathExt {
+    fn to_named_writer(&self) -> Result<(String, impl Write)>;
+}
+
+impl PathExt for Path {
+    fn to_named_writer(&self) -> Result<(String, impl Write)> {
+        let path_str = self
+            .to_str()
+            .ok_or_else(|| diagnostic!("Output path is not valid: {}", self.display()))?;
+        let writer = fs::File::create(self)
+            .into_diagnostic()
+            .wrap_err_with(|| format!("Failed to create output file: {path_str}"))?;
+        debug!("Output to: {}", path_str);
+        Ok((path_str.to_owned(), writer))
     }
 }
 

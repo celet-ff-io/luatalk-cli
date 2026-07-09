@@ -1,5 +1,5 @@
 use clap::{
-    CommandFactory, Parser, Subcommand, ValueEnum,
+    Args, CommandFactory, Parser, Subcommand, ValueEnum,
     builder::{
         Styles,
         styling::{AnsiColor, Effects},
@@ -82,25 +82,11 @@ pub mod generate {
         /// Generate a Typst file to render article, from the base Typst file in asset.
         Typst {
             /// File path of article data in JSON format, from `do <INPUT> json`.
-            #[arg(long, default_value = "output.json")]
+            #[arg(default_value = "output.json")]
             data: String,
 
-            /// Font size in points.
-            #[arg(long, default_value_t = 20)]
-            font_size: u32,
-
-            /// Page width in points
-            #[arg(long, default_value_t = 720)]
-            width: u32,
-
-            /// Font family name to use.
-            /// e.g. 'Noto Sans' or 'BlueakaBetaGBK'
-            #[arg(long, default_value = "Noto Sans")]
-            font_family: String,
-
-            /// Length factor for zooming all elements in the page.
-            #[arg(long, default_value_t = 1.0)]
-            length_factor: f32,
+            #[command(flatten)]
+            config: TypstOutputConfigArgs,
         },
 
         /// Shell completion script for the specified shell.
@@ -127,6 +113,26 @@ pub mod generate {
         /// Simplified Chinese
         #[value(alias("zh-Hans"))]
         ZhHans,
+    }
+
+    #[derive(Debug, Clone, Args)]
+    pub struct TypstOutputConfigArgs {
+        /// Font size in points.
+        #[arg(long, default_value_t = 20)]
+        pub font_size: u32,
+
+        /// Page width in points
+        #[arg(long, default_value_t = 720)]
+        pub width: u32,
+
+        /// Font family name to use.
+        /// e.g. 'Noto Sans' or 'BlueakaBetaGBK'
+        #[arg(long, default_value = "Noto Sans")]
+        pub font_family: String,
+
+        /// Length factor for zooming all elements in the page.
+        #[arg(long, default_value_t = 1.0)]
+        pub length_factor: f32,
     }
 
     #[derive(Debug, Clone, ValueEnum)]
@@ -224,6 +230,21 @@ pub mod do_ {
             /// Ouptut. Defaults to stdout.
             #[arg(short, long, default_value = "-")]
             output: FileOrStdout,
+        },
+
+        /// Output both dumped JSON file and Typst file for rendering the article.
+        /// This action is like a combination of
+        /// `do json -o "<STEM>.json"`
+        /// and `generate typst [OPTIONS] <STEM>.json > <STEM>.typ`.
+        Typst {
+            /// Ouptut path incompleted, ends with file stem. Defaults to None.
+            /// which stands for being same as stem portion of input file name.
+            /// e.g. 'article' or 'dir/article'.
+            #[arg(long)]
+            stem: Option<String>,
+
+            #[command(flatten)]
+            config: generate::TypstOutputConfigArgs,
         },
 
         /// Momotalk export JSON format for 'https://github.com/U1805/momotalk'
