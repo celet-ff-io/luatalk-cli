@@ -550,17 +550,24 @@ impl App<state::OfArticle> {
                 .filename_or_default(DEFAULT_OUTPUTNAME)
                 .unwrap_or_else(|_| DEFAULT_OUTPUTNAME.to_owned())
         });
-        let data_path_str = {
+        let data_filename = {
             let article: dto::Article = self.state.article.into();
             let path = stem.pipe_ref(Path::new).with_extension("json");
-            let (path_str, mut writer) = path.to_named_writer()?;
+            let mut writer = path.to_writer()?;
             Self::output_json_to_writer(&mut writer, &article)?;
-            path_str
+
+            let filename = path
+                .file_name()
+                .ok_or_else(|| diagnostic!("File name of path is not valid: {}", path.display()))?;
+            filename
+                .to_str()
+                .ok_or_else(|| diagnostic!("File name is not valid UTF-8: {}", filename.display()))?
+                .to_owned()
         };
         {
             let path = stem.pipe_ref(Path::new).with_extension("typ");
-            let (_, mut writer) = path.to_named_writer()?;
-            Self::output_typst(&mut writer, &data_path_str, config)?;
+            let mut writer = path.to_writer()?;
+            Self::output_typst(&mut writer, &data_filename, config)?;
         }
         Ok(())
     }
@@ -733,19 +740,17 @@ impl App<state::OfArticle> {
 }
 
 trait PathExt {
-    fn to_named_writer(&self) -> Result<(String, impl Write)>;
+    fn to_writer(&self) -> Result<impl Write>;
 }
 
 impl PathExt for Path {
-    fn to_named_writer(&self) -> Result<(String, impl Write)> {
-        let path_str = self
-            .to_str()
-            .ok_or_else(|| diagnostic!("Output path is not valid: {}", self.display()))?;
+    fn to_writer(&self) -> Result<impl Write> {
+        let path_display = self.display();
         let writer = fs::File::create(self)
             .into_diagnostic()
-            .wrap_err_with(|| format!("Failed to create output file: {path_str}"))?;
-        debug!("Output to: {}", path_str);
-        Ok((path_str.to_owned(), writer))
+            .wrap_err_with(|| format!("Failed to create output file: {path_display}",))?;
+        debug!("Output to: {path_display}");
+        Ok(writer)
     }
 }
 
