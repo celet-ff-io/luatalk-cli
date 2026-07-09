@@ -264,8 +264,8 @@ pub mod do_ {
             /// None stands for a file whose stem is same as input file stem.
             ///
             /// For multiple files like PNG pictures: a directory path,
-            /// or a format string with placeholders for page index starts from 1.
-            /// e.g. 'article_{i}.json'.
+            /// or a format string with placeholder `p` for page number starts from 1.
+            /// e.g. 'article_{p}.json'.
             /// None stands for directory named after stem portion of input file name.
             output: Option<String>,
 
@@ -282,8 +282,8 @@ pub mod do_ {
             /// None stands for stdout.
             ///
             /// For multiple files: a directory path,
-            /// or a format string with placeholders for page index starts from 1.
-            /// e.g. 'article_{i}.json'.
+            /// or a format string with placeholders `p` for page number starts from 1.
+            /// e.g. 'article_{p}.json'.
             /// None stands for directory named after stem portion of input file name.
             #[arg(short, long)]
             output: Option<FileOrStdout>,

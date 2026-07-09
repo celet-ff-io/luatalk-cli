@@ -90,9 +90,9 @@ luatalk do example.lua momotalk
 # Make directory `output/dir/` and write to `output/dir/example_1.json`, ...
 luatalk do example.lua momotalk -o output/dir
 # Make directory `output/` and write to `output/e_1.json`, ...
-luatalk do example.lua momotalk -o output/e_{i}.json
+luatalk do example.lua momotalk -o output/e_{p}.json
 # If you really want, the following command will work as expected too
-luatalk do example.lua momotalk -o output/{i}/{i}.json
+luatalk do example.lua momotalk -o output/{p}/{p}.json
 ```
 
 然而，对于只有一页的文章，输出的工作方式将与单文件输出相同。
@@ -102,7 +102,7 @@ luatalk do example.lua momotalk -o output/{i}/{i}.json
 # To single file
 luatalk do example.lua momotalk --pl=single -o output.json
 # To multiple files
-luatalk do example.lua momotalk --pl=multi -o output/e_{i}.json
+luatalk do example.lua momotalk --pl=multi -o output
 ```
 
 ##### 拼接所有页面并导出到单文件

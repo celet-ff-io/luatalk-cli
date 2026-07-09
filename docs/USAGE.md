@@ -98,9 +98,9 @@ luatalk do example.lua momotalk
 # Make directory `output/dir/` and write to `output/dir/example_1.json`, ...
 luatalk do example.lua momotalk -o output/dir
 # Make directory `output/` and write to `output/e_1.json`, ...
-luatalk do example.lua momotalk -o output/e_{i}.json
+luatalk do example.lua momotalk -o output/e_{p}.json
 # If you really want, the following command will work as expected too
-luatalk do example.lua momotalk -o output/{i}/{i}.json
+luatalk do example.lua momotalk -o output/{p}/{p}.json
 ```
 
 However, for articles have only one page,
@@ -112,7 +112,7 @@ whether to write to multiple files or not.
 # To single file
 luatalk do example.lua momotalk --pl=single -o output.json
 # To multiple files
-luatalk do example.lua momotalk --pl=multi -o output/e_{i}.json
+luatalk do example.lua momotalk --pl=multi -o output
 ```
 
 ##### Concatenate all pages to a single file

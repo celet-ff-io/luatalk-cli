@@ -28,7 +28,7 @@ use crate::{
 };
 
 const DEFAULT_OUTPUTNAME: &str = "article";
-const INDEX_KEY: &str = "i";
+const PAGE_NUMBER_PLACEHOLDER: &str = "p";
 
 pub trait Runnable {
     fn run(self) -> Result<()>;
@@ -720,8 +720,8 @@ impl App<state::OfArticle> {
     fn output_momotalk_multi(self, output: Option<&FileOrStdout>) -> Result<()> {
         let input = || &self.state.input;
         let path = {
-            let strfmt_re =
-                Regex::new(formatcp!(r"\{{{}(?::.*)?\}}", INDEX_KEY)).into_diagnostic()?;
+            let strfmt_re = Regex::new(formatcp!(r"\{{{}(?::.*)?\}}", PAGE_NUMBER_PLACEHOLDER))
+                .into_diagnostic()?;
 
             let certain_dir;
             let path = if let Some(output) = &output {
@@ -776,7 +776,7 @@ impl App<state::OfArticle> {
             MultiPath::Fmtstr(fmtstr) => {
                 let mut vars = HashMap::with_capacity(1);
                 momotalk_exports.try_for_each(|(momotalk_export, i)| {
-                    vars.insert(INDEX_KEY.to_owned(), i.to_string());
+                    vars.insert(PAGE_NUMBER_PLACEHOLDER.to_owned(), i.to_string());
                     let path = strfmt::strfmt(&fmtstr, &vars)
                         .into_diagnostic()
                         .wrap_err("Failed to format output file path string")?
