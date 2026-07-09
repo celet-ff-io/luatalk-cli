@@ -1,6 +1,6 @@
+mod common;
 mod do_;
 mod generate;
-mod utils;
 
 use std::{io::Write, path::Path, rc::Rc};
 

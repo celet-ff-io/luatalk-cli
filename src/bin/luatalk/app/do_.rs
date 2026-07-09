@@ -21,9 +21,9 @@ use luatalk::{Article, InLang, IntoAndLang, LuaExt, dto, momotalk};
 use crate::{
     app::{
         Action, App, Runnable,
+        common::FileOrStdoutExt,
         generate::*,
         state::{self},
-        utils::FileOrStdoutExt,
     },
     cli::do_::{InputFormatArg, OutputCommand, OutputPluralityArg, TypstCompileFormatArg},
     conf,

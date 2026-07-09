@@ -7,7 +7,7 @@ use miette::{IntoDiagnostic, Result};
 use luatalk::assets;
 
 use crate::{
-    app::{App, state, utils::FileOrStdoutExt},
+    app::{App, common::FileOrStdoutExt, state},
     cli::generate::{self, AssetArg, Command, ExampleLangArg, LicenseArg, TypstOutputConfigArgs},
 };
 
