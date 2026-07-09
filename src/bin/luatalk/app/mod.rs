@@ -2,13 +2,13 @@ mod common;
 mod do_;
 mod generate;
 
-use std::{io::Write, path::Path, rc::Rc};
+use std::{path::Path, rc::Rc};
 
 use clap_stdin::{FileOrStdin, FileOrStdout};
-use miette::{IntoDiagnostic, Result, diagnostic};
+use miette::{Result, diagnostic};
 use tap::Pipe;
 
-use luatalk::{Article, assets};
+use luatalk::Article;
 
 use crate::{
     app::{do_::*, generate::*, state::State},
@@ -114,45 +114,6 @@ impl TryFrom<AppArgs> for App<state::Initial> {
             state: state::Initial,
         }
         .pipe(Ok)
-    }
-}
-
-impl<S: state::State> App<S> {
-    /// * `data` - **File path** of a JSON file
-    fn output_typst<W: Write>(
-        writer: &mut W,
-        data: &str,
-        config: &TypstOutputConfig,
-    ) -> Result<()> {
-        let TypstOutputConfig {
-            font_size,
-            width,
-            font_family,
-            length_factor,
-        } = config;
-        if *length_factor <= 0.0 {
-            return Err(
-                diagnostic!("Length factor must be positive, but got: {length_factor}").into(),
-            );
-        }
-        let font_family: String = font_family.pipe_as_ref(json_escape::escape_str).collect();
-        let length_factor_percent = length_factor * 100.0;
-        let data: String = data.pipe(json_escape::escape_str).collect();
-        writeln!(writer, "{}", assets::typst::output()).into_diagnostic()?;
-        writeln!(
-            writer,
-            "#set text({font_size}pt)
-#article-render(
-  width: {width}pt,
-  font: \"{font_family}\",
-  length-factor: {length_factor_percent}%,
-  json(\"{data}\"),
-)
-"
-        )
-        .into_diagnostic()?;
-        writer.flush().into_diagnostic()?;
-        Ok(())
     }
 }
 
