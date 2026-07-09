@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from `i` to `p`. For example, you use `output_{p}.json` now.
 - **Breaking:** Make `--data` in `generate typst --data` a positional argument
   with default value instead of an option.
+- Split `app.rs` into modules under `app`.
 
 ### Fixed
 
