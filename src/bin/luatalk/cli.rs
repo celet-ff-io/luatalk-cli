@@ -48,7 +48,7 @@ pub enum AppCommand {
 
     /// Process LuaTalk article input to something.
     Do {
-        /// Input file. `-` for stdin.
+        /// Input file. '-' for stdin.
         input: FileOrStdin,
 
         /// Concatenate all pages into a single page.
@@ -57,7 +57,7 @@ pub enum AppCommand {
 
         /// Input file format.
         /// Defaults to be inferred from file extension;
-        /// for stdin, defaults to `json`.
+        /// for stdin, defaults to 'json'.
         #[arg(short, long)]
         format: Option<do_::InputFormatArg>,
 
@@ -94,7 +94,7 @@ pub mod generate {
             width: u32,
 
             /// Font family name to use.
-            /// e.g. "Noto Sans" or "BlueakaBetaGBK"
+            /// e.g. 'Noto Sans' or 'BlueakaBetaGBK'
             #[arg(long, default_value = "Noto Sans")]
             font_family: String,
 
@@ -214,28 +214,29 @@ pub mod do_ {
     pub enum OutputCommand {
         /// Show LuaTalk article in `luatalk::Article` structure string.
         Show {
-            /// Ouptut. Defaults to `stdout`.
+            /// Ouptut. Defaults to stdout.
             #[arg(short, long, default_value = "-")]
             output: FileOrStdout,
         },
 
+        /// Output LuaTalk article dumped in JSON format.
         Json {
-            /// Ouptut. Defaults to `stdout`.
+            /// Ouptut. Defaults to stdout.
             #[arg(short, long, default_value = "-")]
             output: FileOrStdout,
         },
 
         /// Momotalk export JSON format for 'https://github.com/U1805/momotalk'
         Momotalk {
-            /// Ouptut. Defaults to `None`.
+            /// Ouptut. Defaults to None.
             ///
-            /// For one file: a file path, or `-` for stdout.
-            /// `None` stands for stdout.
+            /// For one file: a file path, or '-' for stdout.
+            /// None stands for stdout.
             ///
             /// For multiple files: a directory path,
             /// or a format string with placeholders for page index starts from 1.
-            /// e.g. `article_{i}.json`.
-            /// `None` stands for directory named after stem portion of input file name.
+            /// e.g. 'article_{i}.json'.
+            /// None stands for directory named after stem portion of input file name.
             #[arg(short, long)]
             output: Option<FileOrStdout>,
 
@@ -247,8 +248,8 @@ pub mod do_ {
 
     #[derive(Debug, Clone, Default, ValueEnum)]
     pub enum OutputPluralityArg {
-        /// Use `single` for article of only one page,
-        /// `multi` for article of multiple pages.
+        /// 'single' for article of only one page,
+        /// 'multi' for article of multiple pages.
         #[default]
         Auto,
 
