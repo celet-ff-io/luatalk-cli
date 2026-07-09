@@ -21,7 +21,7 @@ use crate::{
     app::state::State,
     cli::{
         AppArgs, AppCommand,
-        do_::{InputFormatArg, OutputCommand, OutputPluralityArg},
+        do_::{InputFormatArg, OutputCommand, OutputPluralityArg, TypstCompileFormatArg},
         generate::{self, AssetArg, ExampleLangArg, LicenseArg},
     },
     conf,
@@ -269,6 +269,10 @@ enum OutputAction {
         stem: Option<String>,
         config: TypstOutputConfig,
     },
+    TypstCompile {
+        output: Option<String>,
+        format: Option<TypstCompileFormat>,
+    },
     Momotalk {
         output: Option<FileOrStdout>,
         plurality: OutputPlurality,
@@ -284,10 +288,29 @@ impl From<OutputCommand> for OutputAction {
                 stem,
                 config: config.into(),
             },
+            OutputCommand::TypstCompile { output, format } => Self::TypstCompile {
+                output,
+                format: format.map(Into::into),
+            },
             OutputCommand::Momotalk { output, pl } => Self::Momotalk {
                 output,
                 plurality: pl.into(),
             },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum TypstCompileFormat {
+    Pdf,
+    Png,
+}
+
+impl From<TypstCompileFormatArg> for TypstCompileFormat {
+    fn from(value: TypstCompileFormatArg) -> Self {
+        match value {
+            TypstCompileFormatArg::Pdf => Self::Pdf,
+            TypstCompileFormatArg::Png => Self::Png,
         }
     }
 }
@@ -514,6 +537,9 @@ impl Runnable for App<state::OfArticle> {
                 OutputAction::Typst { stem, config } => {
                     self.output_typst_and_json(stem.as_ref(), config)
                 }
+                OutputAction::TypstCompile { output, format } => {
+                    self.output_typst_compile(output.as_ref(), format.as_ref())
+                }
                 OutputAction::Momotalk { output, plurality } => {
                     self.output_momotalk(output.as_ref(), plurality)
                 }
@@ -544,12 +570,9 @@ impl App<state::OfArticle> {
         stem: Option<&String>,
         config: &TypstOutputConfig,
     ) -> Result<()> {
-        let stem = stem.cloned().unwrap_or_else(|| {
-            self.state
-                .input
-                .filename_or_default(DEFAULT_OUTPUTNAME)
-                .unwrap_or_else(|_| DEFAULT_OUTPUTNAME.to_owned())
-        });
+        let stem = stem
+            .cloned()
+            .unwrap_or_else(|| self.state.input.file_stem_or(DEFAULT_OUTPUTNAME));
         let data_filename = {
             let article: dto::Article = self.state.article.into();
             let path = stem.pipe_ref(Path::new).with_extension("json");
@@ -570,6 +593,72 @@ impl App<state::OfArticle> {
             Self::output_typst(&mut writer, &data_filename, config)?;
         }
         Ok(())
+    }
+
+    #[inline]
+    fn output_typst_compile(
+        self,
+        output: Option<&String>,
+        format: Option<&TypstCompileFormat>,
+    ) -> Result<()> {
+        let format: &TypstCompileFormat = if let Some(format) = format {
+            format
+        } else {
+            const HELP: &str = "Use `--format` to specify output format";
+            let ext = output
+                .ok_or_else(|| {
+                    diagnostic!(
+                        help = HELP,
+                        "Cannot infer output format without file extension."
+                    )
+                })?
+                .pipe(Path::new)
+                .extension()
+                .ok_or_else(|| {
+                    diagnostic!(
+                        help = HELP,
+                        "Cannot infer output format without file extension."
+                    )
+                })?
+                .to_str()
+                .ok_or_else(|| {
+                    diagnostic!(
+                        help = HELP,
+                        "Cannot infer output format from a file extension not valid UTF-8",
+                    )
+                })?;
+            match ext {
+                "pdf" => &TypstCompileFormat::Pdf,
+                "png" => &TypstCompileFormat::Png,
+                _ => {
+                    return Err(diagnostic!(
+                        help = HELP,
+                        "Cannot infer output format from file extension: {ext}"
+                    )
+                    .into());
+                }
+            }
+        };
+        match format {
+            TypstCompileFormat::Pdf => self.output_typst_compile_single(output, format),
+            TypstCompileFormat::Png => self.ouput_typst_compile_multi(output, format),
+        }
+    }
+
+    fn output_typst_compile_single(
+        self,
+        output: Option<&String>,
+        format: &TypstCompileFormat,
+    ) -> Result<()> {
+        todo!()
+    }
+
+    fn ouput_typst_compile_multi(
+        self,
+        output: Option<&String>,
+        format: &TypstCompileFormat,
+    ) -> Result<()> {
+        todo!()
     }
 
     #[inline]
@@ -641,14 +730,14 @@ impl App<state::OfArticle> {
                     output.filename()
                 } else {
                     return Err(diagnostic!(
-                        "Output file cannot be a file to export article in pages."
+                        "Output file cannot be stdout to export article in pages."
                     )
                     .into());
                 }
                 .to_owned()
             } else {
                 certain_dir = true;
-                input().filename_or_default(DEFAULT_OUTPUTNAME)?
+                input().file_stem_or(DEFAULT_OUTPUTNAME)
             };
 
             if !certain_dir && strfmt_re.is_match(&path) {
@@ -656,7 +745,7 @@ impl App<state::OfArticle> {
                 MultiPath::Fmtstr(path.to_owned())
             } else {
                 let path = path.tap(|p| debug!("Output dir: {p}")).into();
-                let filename = input().filename_or_default(DEFAULT_OUTPUTNAME)?;
+                let filename = input().file_stem_or(DEFAULT_OUTPUTNAME);
                 MultiPath::Dir { path, filename }
             }
         };
@@ -741,6 +830,7 @@ impl App<state::OfArticle> {
 
 trait PathExt {
     fn to_writer(&self) -> Result<impl Write>;
+    fn file_name_or(&self, default: &str) -> String;
 }
 
 impl PathExt for Path {
@@ -752,30 +842,29 @@ impl PathExt for Path {
         debug!("Output to: {path_display}");
         Ok(writer)
     }
+
+    fn file_name_or(&self, default: &str) -> String {
+        if let Some(name) = self.file_name() {
+            name.to_string_lossy().into_owned()
+        } else {
+            default.to_owned()
+        }
+    }
 }
 
 trait FileOrStdinExt {
-    fn filename_or_default(&self, default: &str) -> Result<String>;
+    fn file_stem_or(&self, default: &str) -> String;
 }
 
 impl FileOrStdinExt for FileOrStdin {
-    fn filename_or_default(&self, default: &str) -> Result<String> {
-        if self.is_stdin() {
-            default.to_owned()
+    fn file_stem_or(&self, default: &str) -> String {
+        if self.is_file()
+            && let Some(stem) = self.filename().pipe(Path::new).file_stem()
+        {
+            stem.to_string_lossy().into_owned()
         } else {
-            self.filename()
-                .pipe(Path::new)
-                .file_stem()
-                .ok_or_else(|| {
-                    diagnostic!(
-                        "Input file path does not have a valid file name: {}",
-                        self.filename()
-                    )
-                })?
-                .to_string_lossy()
-                .into_owned()
+            default.to_owned()
         }
-        .pipe(Ok)
     }
 }
 

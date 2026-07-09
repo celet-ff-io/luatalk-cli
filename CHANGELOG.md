@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `do <INPUT> typst-compile` subcommand.
 - `do <INPUT> typst` to generate Typst code and JSON at one time.
   `--stem` to specify the output file name stem.
   Also shares the options of `generate typst` subcommand.
@@ -24,12 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Patch `output.typ`.
+- Patch some error hints.
 
 ## [0.3.0-alpha.4] - 2026-07-08
 
 ### Added
 
-- Add `generate typst` subcommand.
+- `generate typst` subcommand.
 - Base Typst output file `output.typ` to assets.
 - `generate license` subcommand.
 

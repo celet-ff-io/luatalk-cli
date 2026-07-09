@@ -111,10 +111,10 @@ pub mod generate {
 
     #[derive(Debug, Clone, ValueEnum)]
     pub enum ExampleLangArg {
-        /// English
+        /// English.
         En,
 
-        /// Simplified Chinese
+        /// Simplified Chinese.
         #[value(alias("zh-Hans"))]
         ZhHans,
     }
@@ -125,7 +125,7 @@ pub mod generate {
         #[arg(long, default_value_t = 20)]
         pub font_size: u32,
 
-        /// Page width in points
+        /// Page width in points.
         #[arg(long, default_value_t = 720)]
         pub width: u32,
 
@@ -141,17 +141,17 @@ pub mod generate {
 
     #[derive(Debug, Clone, ValueEnum)]
     pub enum AssetArg {
-        /// Example input Lua file in English
+        /// Example input Lua file in English.
         #[value(name = "lua/input/example_en.lua")]
         LuaInputExampleEn,
-        /// Example input Lua file in Simplified Chinese
+        /// Example input Lua file in Simplified Chinese.
         #[value(name = "lua/input/example_zh-hans.lua")]
         LuaInputExampleZhHans,
-        /// `talk.lua` module in default lib of this program
+        /// `talk.lua` module in default lib of this program.
         #[value(name = "lua/lib/talk.lua")]
         LuaLibTalk,
 
-        /// Base file for Typst output
+        /// Base file for Typst output.
         #[value(name = "typst/output.typ")]
         TypstOutput,
 
@@ -251,6 +251,29 @@ pub mod do_ {
             config: generate::TypstOutputConfigArgs,
         },
 
+        /// An easy command to use typst-cli to compile article
+        /// into a supported output format.
+        /// Note that typst-cli supports environment variables for some options,
+        /// you may use them to configure some advanced typst-cli options.
+        /// For more advanced typst-cli usage, or useful features like `typst watch`,
+        /// please use `do <INPU> typst` and manually run typst-cli.
+        TypstCompile {
+            /// Ouptut. Defaults to None.
+            ///
+            /// For one file like PDF : a file path.
+            /// None stands for a file whose stem is same as input file stem.
+            ///
+            /// For multiple files like PNG pictures: a directory path,
+            /// or a format string with placeholders for page index starts from 1.
+            /// e.g. 'article_{i}.json'.
+            /// None stands for directory named after stem portion of input file name.
+            output: Option<String>,
+
+            /// Output format. Defaults to be None,
+            /// which means to inferred from file extension of output file.
+            format: Option<TypstCompileFormatArg>,
+        },
+
         /// Momotalk export JSON format for 'https://github.com/U1805/momotalk'
         Momotalk {
             /// Ouptut. Defaults to None.
@@ -269,6 +292,16 @@ pub mod do_ {
             #[arg(long, default_value = "auto")]
             pl: OutputPluralityArg,
         },
+    }
+
+    #[derive(Debug, Clone, ValueEnum)]
+    #[value(rename_all = "lower")]
+    pub enum TypstCompileFormatArg {
+        /// PDF.
+        Pdf,
+
+        /// Pictures in PNG format.
+        Png,
     }
 
     #[derive(Debug, Clone, Default, ValueEnum)]
