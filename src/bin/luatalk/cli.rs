@@ -90,7 +90,7 @@ pub mod generate {
             data: String,
 
             #[command(flatten)]
-            config: TypstOutputConfigArgs,
+            options: TypstOutputOptionsArgs,
         },
 
         /// Shell completion script for the specified shell.
@@ -120,7 +120,7 @@ pub mod generate {
     }
 
     #[derive(Debug, Clone, Args)]
-    pub struct TypstOutputConfigArgs {
+    pub struct TypstOutputOptionsArgs {
         /// Font size in points.
         #[arg(long, default_value_t = 20)]
         pub font_size: u32,
@@ -248,7 +248,10 @@ pub mod do_ {
             stem: Option<String>,
 
             #[command(flatten)]
-            config: generate::TypstOutputConfigArgs,
+            options: generate::TypstOutputOptionsArgs,
+
+            #[command(flatten)]
+            url_fetch_options: UrlFetchOptionsArgs,
         },
 
         /// An easy command to use typst-cli to compile article
@@ -275,7 +278,10 @@ pub mod do_ {
             format: Option<TypstCompileFormatArg>,
 
             #[command(flatten)]
-            config: generate::TypstOutputConfigArgs,
+            options: generate::TypstOutputOptionsArgs,
+
+            #[command(flatten)]
+            url_fetch_options: UrlFetchOptionsArgs,
         },
 
         /// Momotalk export JSON format for 'https://github.com/U1805/momotalk'
@@ -306,6 +312,13 @@ pub mod do_ {
 
         /// Pictures in PNG format.
         Png,
+    }
+
+    #[derive(Debug, Clone, Args)]
+    pub struct UrlFetchOptionsArgs {
+        /// Enable this to do not fetch any images from URL.
+        #[arg(long)]
+        pub offline: bool,
     }
 
     #[derive(Debug, Clone, Default, ValueEnum)]

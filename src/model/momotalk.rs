@@ -189,7 +189,6 @@ impl ImageValueExt for domain::ImageValue {
             "ImageValue has no URL, try to generate data URL from path: {:?}",
             self.path()
         );
-        self.try_ensure_path()?;
         self.try_generate_data_url()?.pipe(Ok)
     }
 }

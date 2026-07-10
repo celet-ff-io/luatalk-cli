@@ -8,7 +8,7 @@ use luatalk::assets;
 
 use crate::{
     app::{App, common::FileOrStdoutExt, state},
-    cli::generate::{self, AssetArg, Command, ExampleLangArg, LicenseArg, TypstOutputConfigArgs},
+    cli::generate::{self, AssetArg, Command, ExampleLangArg, LicenseArg, TypstOutputOptionsArgs},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -18,7 +18,7 @@ pub enum GenerateAction {
     },
     Typst {
         data: String,
-        config: TypstOutputConfig,
+        options: TypstOutputOptions,
     },
     Completion {
         shell: clap_complete::Shell,
@@ -36,9 +36,9 @@ impl From<Command> for GenerateAction {
     fn from(value: Command) -> Self {
         match value {
             Command::Example { lang } => Self::Example { lang: lang.into() },
-            Command::Typst { data, config } => Self::Typst {
+            Command::Typst { data, options } => Self::Typst {
                 data,
-                config: config.into(),
+                options: options.into(),
             },
             Command::Completion { shell } => Self::Completion { shell },
             Command::Asset { asset } => Self::Asset {
@@ -68,16 +68,16 @@ impl From<ExampleLangArg> for ExampleLang {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TypstOutputConfig {
+pub struct TypstOutputOptions {
     pub font_size: u32,
     pub width: u32,
     pub font_family: String,
     pub length_factor: f32,
 }
 
-impl From<TypstOutputConfigArgs> for TypstOutputConfig {
-    fn from(value: TypstOutputConfigArgs) -> Self {
-        let TypstOutputConfigArgs {
+impl From<TypstOutputOptionsArgs> for TypstOutputOptions {
+    fn from(value: TypstOutputOptionsArgs) -> Self {
+        let TypstOutputOptionsArgs {
             font_size,
             width,
             font_family,
@@ -152,8 +152,8 @@ impl App<state::Initial> {
                 ExampleLang::ZhHans => w.output_str(assets::lua::input::example_zh_hans())?,
             },
 
-            GenerateAction::Typst { data, config } => {
-                Self::output_typst(&mut stdout(), data, config)?
+            GenerateAction::Typst { data, options } => {
+                Self::output_typst(&mut stdout(), data, options)?
             }
 
             GenerateAction::Completion { shell } => generate::completion(*shell, &mut io::stdout()),

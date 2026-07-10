@@ -7,7 +7,7 @@ use luatalk::assets;
 use miette::{IntoDiagnostic, Result, diagnostic};
 use tap::Pipe;
 
-use crate::app::{App, generate::TypstOutputConfig, state};
+use crate::app::{App, generate::TypstOutputOptions, state};
 
 // Action
 
@@ -16,14 +16,14 @@ impl<S: state::State> App<S> {
     pub fn output_typst<W: Write>(
         writer: &mut W,
         data: &str,
-        config: &TypstOutputConfig,
+        options: &TypstOutputOptions,
     ) -> Result<()> {
-        let TypstOutputConfig {
+        let TypstOutputOptions {
             font_size,
             width,
             font_family,
             length_factor,
-        } = config;
+        } = options;
         if *length_factor <= 0.0 {
             return Err(
                 diagnostic!("Length factor must be positive, but got: {length_factor}").into(),

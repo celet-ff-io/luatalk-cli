@@ -28,7 +28,10 @@ use crate::{
         generate::*,
         state::{self},
     },
-    cli::do_::{InputFormatArg, OutputCommand, OutputPluralityArg, TypstCompileFormatArg},
+    cli::do_::{
+        InputFormatArg, OutputCommand, OutputPluralityArg, TypstCompileFormatArg,
+        UrlFetchOptionsArgs,
+    },
     conf,
 };
 
@@ -62,12 +65,14 @@ pub enum OutputAction {
     },
     Typst {
         stem: Option<String>,
-        config: TypstOutputConfig,
+        options: TypstOutputOptions,
+        url_fetch_options: UrlFetchOptions,
     },
     TypstCompile {
         output: Option<String>,
         format: Option<TypstCompileFormat>,
-        config: TypstOutputConfig,
+        options: TypstOutputOptions,
+        url_fetch_options: UrlFetchOptions,
     },
     Momotalk {
         output: Option<FileOrStdout>,
@@ -80,18 +85,25 @@ impl From<OutputCommand> for OutputAction {
         match value {
             OutputCommand::Show { output } => Self::Show { output },
             OutputCommand::Json { output } => Self::Json { output },
-            OutputCommand::Typst { stem, config } => Self::Typst {
+            OutputCommand::Typst {
                 stem,
-                config: config.into(),
+                options,
+                url_fetch_options,
+            } => Self::Typst {
+                stem,
+                options: options.into(),
+                url_fetch_options: url_fetch_options.into(),
             },
             OutputCommand::TypstCompile {
                 output,
                 format,
-                config,
+                options,
+                url_fetch_options,
             } => Self::TypstCompile {
                 output,
                 format: format.map(Into::into),
-                config: config.into(),
+                options: options.into(),
+                url_fetch_options: url_fetch_options.into(),
             },
             OutputCommand::Momotalk { output, pl } => Self::Momotalk {
                 output,
@@ -121,6 +133,19 @@ impl From<TypstCompileFormat> for &str {
         match value {
             TypstCompileFormat::Pdf => "pdf",
             TypstCompileFormat::Png => "png",
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct UrlFetchOptions {
+    pub offline: bool,
+}
+
+impl From<UrlFetchOptionsArgs> for UrlFetchOptions {
+    fn from(value: UrlFetchOptionsArgs) -> Self {
+        Self {
+            offline: value.offline,
         }
     }
 }
@@ -218,14 +243,19 @@ impl Runnable for App<state::OfArticle> {
             Action::Do { output, .. } => match output {
                 OutputAction::Show { output } => self.output_show(output),
                 OutputAction::Json { output } => self.output_json(output),
-                OutputAction::Typst { stem, config } => {
-                    self.output_typst_and_json(stem.as_ref(), config)
-                }
+                OutputAction::Typst {
+                    stem,
+                    options,
+                    url_fetch_options,
+                } => self.output_typst_and_json(stem.as_ref(), options, url_fetch_options),
                 OutputAction::TypstCompile {
                     output,
                     format,
-                    config,
-                } => self.output_typst_compile(output.as_ref(), *format, config),
+                    options,
+                    url_fetch_options,
+                } => {
+                    self.output_typst_compile(output.as_ref(), *format, options, url_fetch_options)
+                }
                 OutputAction::Momotalk { output, plurality } => {
                     self.output_momotalk(output.as_ref(), plurality)
                 }
@@ -254,7 +284,8 @@ impl App<state::OfArticle> {
     fn output_typst_and_json(
         self,
         stem: Option<&String>,
-        config: &TypstOutputConfig,
+        config: &TypstOutputOptions,
+        url_fetch_options: &UrlFetchOptions,
     ) -> Result<()> {
         let article = self.state.article;
         let stem = stem
@@ -281,8 +312,10 @@ impl App<state::OfArticle> {
             Self::output_typst(&mut writer, &data_filename, config)?;
             eprintln!("Output Typst file: {}", path.display());
         }
-        // Fetch data from URL if needed
-        article.try_ensure_path().into_diagnostic()?;
+        if url_fetch_options.offline {
+            // Fetch data from URL if needed
+            article.try_ensure_path().into_diagnostic()?;
+        }
         Ok(())
     }
 
@@ -291,7 +324,8 @@ impl App<state::OfArticle> {
         self,
         output: Option<&String>,
         format: Option<TypstCompileFormat>,
-        config: &TypstOutputConfig,
+        config: &TypstOutputOptions,
+        url_fetch_options: &UrlFetchOptions,
     ) -> Result<()> {
         // Inputs
         let format: TypstCompileFormat = if let Some(format) = format {
@@ -378,68 +412,68 @@ or specify the command with `LUATALK__DO_TYPS_COMPILE__TYPST_COMMAND` environmen
             warn!("Checking typst-cli version failed: {err:?}");
         }
 
-        {
-            let article = self
-                .state
-                .article
-                .try_into_path_abs()
-                .into_diagnostic()
-                .wrap_err("Failed to convert paths to absolute paths")?;
-            debug!("Build article of absolute paths success");
+        let article = self
+            .state
+            .article
+            .try_into_path_abs()
+            .into_diagnostic()
+            .wrap_err("Failed to convert paths to absolute paths")?;
+        debug!("Build article of absolute paths success");
 
-            let article_dto: dto::Article = article.clone().into();
-            let mut temp_json = tempfile::Builder::new()
-                .prefix("luatalk-output")
-                .suffix(".json")
-                .tempfile()
-                .into_diagnostic()?;
-            Self::output_json_to_writer(&mut temp_json, &article_dto)?;
-            debug!("Temporary JSON file path: {}", temp_json.path().display());
-            let temp_json_path = temp_json.path().to_str().ok_or_else(|| {
-                diagnostic!(
-                    "Temporary JSON file path is not valid UTF-8: {}",
-                    temp_json.path().display()
-                )
-            })?;
-            let mut temp_typ = tempfile::Builder::new()
-                .prefix("luatalk-output")
-                .suffix(".typ")
-                .tempfile()
-                .into_diagnostic()?;
-            debug!("Temporary Typst file path: {}", temp_typ.path().display());
-            Self::output_typst(&mut temp_typ, temp_json_path, config)?;
+        let article_dto: dto::Article = article.clone().into();
+        let mut temp_json = tempfile::Builder::new()
+            .prefix("luatalk-output")
+            .suffix(".json")
+            .tempfile()
+            .into_diagnostic()?;
+        Self::output_json_to_writer(&mut temp_json, &article_dto)?;
+        debug!("Temporary JSON file path: {}", temp_json.path().display());
+        let temp_json_path = temp_json.path().to_str().ok_or_else(|| {
+            diagnostic!(
+                "Temporary JSON file path is not valid UTF-8: {}",
+                temp_json.path().display()
+            )
+        })?;
+        let mut temp_typ = tempfile::Builder::new()
+            .prefix("luatalk-output")
+            .suffix(".typ")
+            .tempfile()
+            .into_diagnostic()?;
+        debug!("Temporary Typst file path: {}", temp_typ.path().display());
+        Self::output_typst(&mut temp_typ, temp_json_path, config)?;
 
+        if !url_fetch_options.offline {
             // Fetch data from URL if needed
             article.try_ensure_path().into_diagnostic()?;
-
-            // Run typst-cli
-            let output = process::Command::new(typst_command)
-                .arg("compile")
-                .arg(temp_typ.path())
-                .arg("--output")
-                .arg(&output)
-                .arg("--format")
-                .arg(match format {
-                    TypstCompileFormat::Pdf => "pdf",
-                    TypstCompileFormat::Png => "png",
-                })
-                .output()
-                .into_diagnostic()
-                .wrap_err("Failed to run typst command")?;
-            if !output.status.success() {
-                error!(
-                    "typst command stderr: {}",
-                    output.stderr.pipe_as_ref(String::from_utf8_lossy)
-                );
-                return Err(diagnostic!(
-                    "typst command failed with status: {}. See stderr for details.",
-                    output.status
-                )
-                .into());
-            }
-            let stdout = output.stdout.pipe_as_ref(String::from_utf8_lossy);
-            println!("{stdout}");
         }
+
+        // Run typst-cli
+        let output = process::Command::new(typst_command)
+            .arg("compile")
+            .arg(temp_typ.path())
+            .arg("--output")
+            .arg(&output)
+            .arg("--format")
+            .arg(match format {
+                TypstCompileFormat::Pdf => "pdf",
+                TypstCompileFormat::Png => "png",
+            })
+            .output()
+            .into_diagnostic()
+            .wrap_err("Failed to run typst command")?;
+        if !output.status.success() {
+            error!(
+                "typst command stderr: {}",
+                output.stderr.pipe_as_ref(String::from_utf8_lossy)
+            );
+            return Err(diagnostic!(
+                "typst command failed with status: {}. See stderr for details.",
+                output.status
+            )
+            .into());
+        }
+        let stdout = output.stdout.pipe_as_ref(String::from_utf8_lossy);
+        println!("{stdout}");
 
         Ok(())
     }
