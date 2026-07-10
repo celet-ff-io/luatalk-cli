@@ -30,7 +30,7 @@ use crate::{
     conf,
 };
 
-const DEFAULT_OUTPUT_STEM: &str = "article";
+const DEFAULT_OUTPUT_STEM: &str = "output";
 const PAGE_NUMBER_PLACEHOLDER: &str = "p";
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
