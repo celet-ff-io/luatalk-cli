@@ -1,3 +1,5 @@
+/// Common errors.
+
 #[derive(Debug, thiserror::Error)]
 pub enum LuaParseError {
     #[error("Failed to evaluate Lua code: {0}")]

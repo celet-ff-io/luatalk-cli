@@ -149,7 +149,7 @@ impl From<domain::Msg> for Msg {
         let domain::Msg {
             role,
             body,
-            profile, // profile: Option<Arc<Profile>>
+            profile,
         } = msg;
         Msg {
             role: role.into(),
