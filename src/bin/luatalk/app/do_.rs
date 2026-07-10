@@ -1,5 +1,6 @@
 /// For subcommand `do`.
 use std::{
+    cell::LazyCell,
     collections::HashMap,
     fs,
     io::Write,
@@ -29,7 +30,7 @@ use crate::{
     conf,
 };
 
-const DEFAULT_OUTPUTNAME: &str = "article";
+const DEFAULT_OUTPUT_STEM: &str = "article";
 const PAGE_NUMBER_PLACEHOLDER: &str = "p";
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
@@ -204,7 +205,7 @@ impl Runnable for App<state::OfArticle> {
                     self.output_typst_and_json(stem.as_ref(), config)
                 }
                 OutputAction::TypstCompile { output, format } => {
-                    self.output_typst_compile(output.as_ref(), format.as_ref())
+                    self.output_typst_compile(output.as_ref(), *format)
                 }
                 OutputAction::Momotalk { output, plurality } => {
                     self.output_momotalk(output.as_ref(), plurality)
@@ -238,7 +239,7 @@ impl App<state::OfArticle> {
     ) -> Result<()> {
         let stem = stem
             .cloned()
-            .unwrap_or_else(|| self.state.input.file_stem_or(DEFAULT_OUTPUTNAME));
+            .unwrap_or_else(|| self.state.input.file_stem_or(DEFAULT_OUTPUT_STEM));
         let data_filename = {
             let article: dto::Article = self.state.article.into();
             let path = stem.pipe_ref(Path::new).with_extension("json");
@@ -265,9 +266,9 @@ impl App<state::OfArticle> {
     fn output_typst_compile(
         self,
         output: Option<&String>,
-        format: Option<&TypstCompileFormat>,
+        format: Option<TypstCompileFormat>,
     ) -> Result<()> {
-        let format: &TypstCompileFormat = if let Some(format) = format {
+        let format: TypstCompileFormat = if let Some(format) = format {
             format
         } else {
             const HELP: &str = "Use `--format` to specify output format";
@@ -294,8 +295,8 @@ impl App<state::OfArticle> {
                     )
                 })?;
             match ext {
-                "pdf" => &TypstCompileFormat::Pdf,
-                "png" => &TypstCompileFormat::Png,
+                "pdf" => TypstCompileFormat::Pdf,
+                "png" => TypstCompileFormat::Png,
                 _ => {
                     return Err(diagnostic!(
                         help = HELP,
@@ -305,30 +306,70 @@ impl App<state::OfArticle> {
                 }
             }
         };
-        match format {
-            TypstCompileFormat::Pdf => self.output_typst_compile_single(output, format),
-            TypstCompileFormat::Png => self.ouput_typst_compile_multi(output, format),
+        let ext_for_single = match format {
+            TypstCompileFormat::Pdf => Some("pdf"),
+            TypstCompileFormat::Png => None,
+        };
+        if let Some(ext) = ext_for_single {
+            let output = if let Some(output) = output {
+                output.to_owned()
+            } else {
+                format!("{}.{ext}", self.input_stem())
+            };
+            self.output_typst_compile_single(output, format)
+        } else {
+            let output = {
+                let strfmt_re =
+                    Regex::new(formatcp!(r"\{{0?{}(?::.*)?\}}", PAGE_NUMBER_PLACEHOLDER))
+                        .into_diagnostic()?;
+
+                let stem = LazyCell::new(|| self.input_stem());
+                let maybe_format_str = output.is_some();
+                let path = output.unwrap_or_else(|| &stem);
+
+                if maybe_format_str && strfmt_re.is_match(path) {
+                    debug!("Output file pattern: {path}");
+                    path.to_owned()
+                } else {
+                    debug!("Output dir: {path}");
+                    let stem: &str = &stem;
+                    format!("{path}/{stem}_{{0p}}.png")
+                }
+            };
+            self.ouput_typst_compile_multi(output, &format)
         }
     }
 
-    fn output_typst_compile_single(
-        self,
-        output: Option<&String>,
-        format: &TypstCompileFormat,
-    ) -> Result<()> {
+    fn output_typst_compile_single(self, output: String, format: TypstCompileFormat) -> Result<()> {
         let _ = output;
-        let _ = format;
-        todo!()
+        match format {
+            TypstCompileFormat::Pdf => {
+                // todo
+            }
+            _ => {
+                return Err(diagnostic!(
+                    "Output format is not supported for single-page output: {format:?}"
+                )
+                .into());
+            }
+        }
+        Ok(())
     }
 
-    fn ouput_typst_compile_multi(
-        self,
-        output: Option<&String>,
-        format: &TypstCompileFormat,
-    ) -> Result<()> {
+    fn ouput_typst_compile_multi(self, output: String, format: &TypstCompileFormat) -> Result<()> {
         let _ = output;
-        let _ = format;
-        todo!()
+        match format {
+            TypstCompileFormat::Png => {
+                // todo
+            }
+            _ => {
+                return Err(diagnostic!(
+                    "Output format is not supported for multi-page output: {format:?}"
+                )
+                .into());
+            }
+        }
+        Ok(())
     }
 
     #[inline]
@@ -388,14 +429,12 @@ impl App<state::OfArticle> {
     }
 
     fn output_momotalk_multi(self, output: Option<&FileOrStdout>) -> Result<()> {
-        let input = || &self.state.input;
         let path = {
-            let strfmt_re = Regex::new(formatcp!(r"\{{{}(?::.*)?\}}", PAGE_NUMBER_PLACEHOLDER))
+            let strfmt_re = Regex::new(formatcp!(r"\{{0?{}(?::.*)?\}}", PAGE_NUMBER_PLACEHOLDER))
                 .into_diagnostic()?;
 
-            let certain_dir;
-            let path = if let Some(output) = &output {
-                certain_dir = false;
+            let maybe_format_str = output.is_some();
+            let path = if let Some(output) = output {
                 if output.is_file() {
                     output.filename()
                 } else {
@@ -406,16 +445,16 @@ impl App<state::OfArticle> {
                 }
                 .to_owned()
             } else {
-                certain_dir = true;
-                input().file_stem_or(DEFAULT_OUTPUTNAME)
+                self.input_stem()
             };
 
-            if !certain_dir && strfmt_re.is_match(&path) {
+            if maybe_format_str && strfmt_re.is_match(&path) {
                 debug!("Output file pattern: {path}");
                 MultiPath::Fmtstr(path.to_owned())
             } else {
-                let path = path.tap(|p| debug!("Output dir: {p}")).into();
-                let filename = input().file_stem_or(DEFAULT_OUTPUTNAME);
+                debug!("Output dir: {path}");
+                let path = path.into();
+                let filename = self.input_stem();
                 MultiPath::Dir { path, filename }
             }
         };
@@ -456,6 +495,11 @@ impl App<state::OfArticle> {
                 })
             }
         }
+    }
+
+    #[inline]
+    fn input_stem(&self) -> String {
+        self.state.input.file_stem_or(DEFAULT_OUTPUT_STEM)
     }
 
     fn output_json_to_writer<W, T>(mut writer: &mut W, value: &T) -> Result<()>
@@ -508,8 +552,6 @@ enum MultiPath {
 
 trait PathExt {
     fn to_writer(&self) -> Result<impl Write>;
-    #[allow(dead_code)]
-    fn file_name_or(&self, default: &str) -> String;
 }
 
 impl PathExt for Path {
@@ -520,14 +562,6 @@ impl PathExt for Path {
             .wrap_err_with(|| format!("Failed to create output file: {path_display}",))?;
         debug!("Output to: {path_display}");
         Ok(writer)
-    }
-
-    fn file_name_or(&self, default: &str) -> String {
-        if let Some(name) = self.file_name() {
-            name.to_string_lossy().into_owned()
-        } else {
-            default.to_owned()
-        }
     }
 }
 
