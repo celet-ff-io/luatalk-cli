@@ -93,12 +93,26 @@ impl Article {
 
         Self { pages, ..self }.pipe(Ok)
     }
+
+    pub fn try_ensure_path(&self) -> Result<(), ArticleError> {
+        for page in &self.pages {
+            for msg in &page.msgs {
+                if let Body::Image(image) = &msg.body {
+                    image.try_ensure_path()?;
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum ArticleError {
     #[error("File system IO error occurred: {0}")]
     IoError(#[from] io::Error),
+
+    #[error(transparent)]
+    ImageFetchError(#[from] ImageValueError),
 }
 
 impl InLang for Article {
@@ -259,7 +273,7 @@ impl ImageValue {
                 debug!("Created directory: {:?}", parent);
             };
             if let Some(url) = url {
-                debug!("Fetch image from URL: {:?}", url);
+                eprintln!("Fetching image from URL: {:?}", url);
                 let mut reader = agent().get(url).call()?.into_body().into_reader();
                 let mut writer = File::create(path)?;
                 io::copy(&mut reader, &mut writer)?;

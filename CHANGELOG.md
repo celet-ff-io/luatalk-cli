@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Make `do <INPUT> typst` able to fetch images from URL.
 - Patch `output.typ`.
 - Patch some error hints.
 

@@ -256,14 +256,16 @@ impl App<state::OfArticle> {
         stem: Option<&String>,
         config: &TypstOutputConfig,
     ) -> Result<()> {
+        let article = self.state.article;
         let stem = stem
             .cloned()
             .unwrap_or_else(|| self.state.input.file_stem_or(DEFAULT_OUTPUT_STEM));
         let data_filename = {
-            let article: dto::Article = self.state.article.into();
+            let article_dto: dto::Article = article.clone().into();
             let path = stem.pipe_ref(Path::new).with_extension("json");
             let mut writer = path.to_writer()?;
-            Self::output_json_to_writer(&mut writer, &article)?;
+            Self::output_json_to_writer(&mut writer, &article_dto)?;
+            eprintln!("Output JSON file: {}", path.display());
 
             let filename = path
                 .file_name()
@@ -277,7 +279,10 @@ impl App<state::OfArticle> {
             let path = stem.pipe_ref(Path::new).with_extension("typ");
             let mut writer = path.to_writer()?;
             Self::output_typst(&mut writer, &data_filename, config)?;
+            eprintln!("Output Typst file: {}", path.display());
         }
+        // Fetch data from URL if needed
+        article.try_ensure_path().into_diagnostic()?;
         Ok(())
     }
 
@@ -374,22 +379,22 @@ or specify the command with `LUATALK__DO_TYPS_COMPILE__TYPST_COMMAND` environmen
         }
 
         {
-            // Create temporary files
+            let article = self
+                .state
+                .article
+                .try_into_path_abs()
+                .into_diagnostic()
+                .wrap_err("Failed to convert paths to absolute paths")?;
+            debug!("Build article of absolute paths success");
+
+            let article_dto: dto::Article = article.clone().into();
             let mut temp_json = tempfile::Builder::new()
                 .prefix("luatalk-output")
                 .suffix(".json")
                 .tempfile()
                 .into_diagnostic()?;
-            {
-                let article: dto::Article = self
-                    .state
-                    .article
-                    .try_into_path_abs()
-                    .into_diagnostic()
-                    .wrap_err("Failed to convert paths to absolute paths")?
-                    .into();
-                Self::output_json_to_writer(&mut temp_json, &article)?;
-            }
+            Self::output_json_to_writer(&mut temp_json, &article_dto)?;
+            debug!("Temporary JSON file path: {}", temp_json.path().display());
             let temp_json_path = temp_json.path().to_str().ok_or_else(|| {
                 diagnostic!(
                     "Temporary JSON file path is not valid UTF-8: {}",
@@ -401,7 +406,11 @@ or specify the command with `LUATALK__DO_TYPS_COMPILE__TYPST_COMMAND` environmen
                 .suffix(".typ")
                 .tempfile()
                 .into_diagnostic()?;
+            debug!("Temporary Typst file path: {}", temp_typ.path().display());
             Self::output_typst(&mut temp_typ, temp_json_path, config)?;
+
+            // Fetch data from URL if needed
+            article.try_ensure_path().into_diagnostic()?;
 
             // Run typst-cli
             let output = process::Command::new(typst_command)
