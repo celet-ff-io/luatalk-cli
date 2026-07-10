@@ -271,7 +271,11 @@ pub mod do_ {
 
             /// Output format. Defaults to be None,
             /// which means to inferred from file extension of output file.
+            #[arg(short, long)]
             format: Option<TypstCompileFormatArg>,
+
+            #[command(flatten)]
+            config: generate::TypstOutputConfigArgs,
         },
 
         /// Momotalk export JSON format for 'https://github.com/U1805/momotalk'

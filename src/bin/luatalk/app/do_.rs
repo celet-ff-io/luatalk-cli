@@ -5,16 +5,18 @@ use std::{
     fs,
     io::Write,
     path::{Path, PathBuf},
+    process,
     rc::Rc,
     str::FromStr,
 };
 
 use clap_stdin::{FileOrStdin, FileOrStdout};
 use const_format::formatcp;
-use log::{debug, warn};
+use log::{debug, error, warn};
 use miette::{IntoDiagnostic, Result, WrapErr, diagnostic};
 use mlua::Lua;
 use regex::Regex;
+use semver::VersionReq;
 use tap::{Pipe, Tap};
 
 use luatalk::{Article, InLang, IntoAndLang, LuaExt, dto, momotalk};
@@ -65,6 +67,7 @@ pub enum OutputAction {
     TypstCompile {
         output: Option<String>,
         format: Option<TypstCompileFormat>,
+        config: TypstOutputConfig,
     },
     Momotalk {
         output: Option<FileOrStdout>,
@@ -81,9 +84,14 @@ impl From<OutputCommand> for OutputAction {
                 stem,
                 config: config.into(),
             },
-            OutputCommand::TypstCompile { output, format } => Self::TypstCompile {
+            OutputCommand::TypstCompile {
+                output,
+                format,
+                config,
+            } => Self::TypstCompile {
                 output,
                 format: format.map(Into::into),
+                config: config.into(),
             },
             OutputCommand::Momotalk { output, pl } => Self::Momotalk {
                 output,
@@ -104,6 +112,15 @@ impl From<TypstCompileFormatArg> for TypstCompileFormat {
         match value {
             TypstCompileFormatArg::Pdf => Self::Pdf,
             TypstCompileFormatArg::Png => Self::Png,
+        }
+    }
+}
+
+impl From<TypstCompileFormat> for &str {
+    fn from(value: TypstCompileFormat) -> &'static str {
+        match value {
+            TypstCompileFormat::Pdf => "pdf",
+            TypstCompileFormat::Png => "png",
         }
     }
 }
@@ -204,9 +221,11 @@ impl Runnable for App<state::OfArticle> {
                 OutputAction::Typst { stem, config } => {
                     self.output_typst_and_json(stem.as_ref(), config)
                 }
-                OutputAction::TypstCompile { output, format } => {
-                    self.output_typst_compile(output.as_ref(), *format)
-                }
+                OutputAction::TypstCompile {
+                    output,
+                    format,
+                    config,
+                } => self.output_typst_compile(output.as_ref(), *format, config),
                 OutputAction::Momotalk { output, plurality } => {
                     self.output_momotalk(output.as_ref(), plurality)
                 }
@@ -267,7 +286,9 @@ impl App<state::OfArticle> {
         self,
         output: Option<&String>,
         format: Option<TypstCompileFormat>,
+        config: &TypstOutputConfig,
     ) -> Result<()> {
+        // Inputs
         let format: TypstCompileFormat = if let Some(format) = format {
             format
         } else {
@@ -294,7 +315,7 @@ impl App<state::OfArticle> {
                         "Cannot infer output format from a file extension not valid UTF-8",
                     )
                 })?;
-            match ext {
+            match ext.to_lowercase().as_str() {
                 "pdf" => TypstCompileFormat::Pdf,
                 "png" => TypstCompileFormat::Png,
                 _ => {
@@ -306,68 +327,137 @@ impl App<state::OfArticle> {
                 }
             }
         };
-        let ext_for_single = match format {
-            TypstCompileFormat::Pdf => Some("pdf"),
+        let output = if let Some(ext) = match format {
+            TypstCompileFormat::Pdf => format.pipe(Into::<&str>::into).into(),
             TypstCompileFormat::Png => None,
-        };
-        if let Some(ext) = ext_for_single {
-            let output = if let Some(output) = output {
+        } {
+            if let Some(output) = output {
                 output.to_owned()
             } else {
                 format!("{}.{ext}", self.input_stem())
-            };
-            self.output_typst_compile_single(output, format)
-        } else {
-            let output = {
-                let strfmt_re =
-                    Regex::new(formatcp!(r"\{{0?{}(?::.*)?\}}", PAGE_NUMBER_PLACEHOLDER))
-                        .into_diagnostic()?;
-
-                let stem = LazyCell::new(|| self.input_stem());
-                let maybe_format_str = output.is_some();
-                let path = output.unwrap_or_else(|| &stem);
-
-                if maybe_format_str && strfmt_re.is_match(path) {
-                    debug!("Output file pattern: {path}");
-                    path.to_owned()
-                } else {
-                    debug!("Output dir: {path}");
-                    let stem: &str = &stem;
-                    format!("{path}/{stem}_{{0p}}.png")
-                }
-            };
-            self.ouput_typst_compile_multi(output, &format)
-        }
-    }
-
-    fn output_typst_compile_single(self, output: String, format: TypstCompileFormat) -> Result<()> {
-        let _ = output;
-        match format {
-            TypstCompileFormat::Pdf => {
-                // todo
             }
-            _ => {
+        } else {
+            let strfmt_re = Regex::new(formatcp!(r"\{{0?{}(?::.*)?\}}", PAGE_NUMBER_PLACEHOLDER))
+                .into_diagnostic()?;
+
+            let stem = LazyCell::new(|| self.input_stem());
+            let maybe_format_str = output.is_some();
+            let path = output.unwrap_or_else(|| &stem);
+
+            if maybe_format_str && strfmt_re.is_match(path) {
+                debug!("Output file pattern: {path}");
+                path.to_owned()
+            } else {
+                debug!("Output dir: {path}");
+                let stem: &str = &stem;
+                format!("{path}/{stem}_{{0p}}.png")
+            }
+        };
+
+        // Get typst-cli
+        let typst_command = conf::app_config()
+            .do_typst_compile()
+            .typst_command()
+            .pipe(|cmd| if cmd.is_empty() { "typst" } else { cmd });
+        // Check which typst-cli
+        {
+            let path = which::which("typst").into_diagnostic().wrap_err(
+                "Cannot find typst command in PATH.
+Please install typst-cli (e.g. `cargo install typst-cli`) to PATH,
+or specify the command with `LUATALK__DO_TYPS_COMPILE__TYPST_COMMAND` environment variable.",
+            )?;
+            eprintln!("Run typst-cli: {}", path.display());
+        }
+        // Check its version. Should never panic here.
+        if let Err(err) = Self::check_typst_cli_version(typst_command) {
+            warn!("Checking typst-cli version failed: {err:?}");
+        }
+
+        {
+            // Create temporary files
+            let mut temp_json = tempfile::Builder::new()
+                .prefix("luatalk-output")
+                .suffix(".json")
+                .tempfile()
+                .into_diagnostic()?;
+            {
+                let article: dto::Article = self
+                    .state
+                    .article
+                    .try_into_path_abs()
+                    .into_diagnostic()
+                    .wrap_err("Failed to convert paths to absolute paths")?
+                    .into();
+                Self::output_json_to_writer(&mut temp_json, &article)?;
+            }
+            let temp_json_path = temp_json.path().to_str().ok_or_else(|| {
+                diagnostic!(
+                    "Temporary JSON file path is not valid UTF-8: {}",
+                    temp_json.path().display()
+                )
+            })?;
+            let mut temp_typ = tempfile::Builder::new()
+                .prefix("luatalk-output")
+                .suffix(".typ")
+                .tempfile()
+                .into_diagnostic()?;
+            Self::output_typst(&mut temp_typ, temp_json_path, config)?;
+
+            // Run typst-cli
+            let output = process::Command::new(typst_command)
+                .arg("compile")
+                .arg(temp_typ.path())
+                .arg("--output")
+                .arg(&output)
+                .arg("--format")
+                .arg(match format {
+                    TypstCompileFormat::Pdf => "pdf",
+                    TypstCompileFormat::Png => "png",
+                })
+                .output()
+                .into_diagnostic()
+                .wrap_err("Failed to run typst command")?;
+            if !output.status.success() {
+                error!(
+                    "typst command stderr: {}",
+                    output.stderr.pipe_as_ref(String::from_utf8_lossy)
+                );
                 return Err(diagnostic!(
-                    "Output format is not supported for single-page output: {format:?}"
+                    "typst command failed with status: {}. See stderr for details.",
+                    output.status
                 )
                 .into());
             }
+            let stdout = output.stdout.pipe_as_ref(String::from_utf8_lossy);
+            println!("{stdout}");
         }
+
         Ok(())
     }
 
-    fn ouput_typst_compile_multi(self, output: String, format: &TypstCompileFormat) -> Result<()> {
-        let _ = output;
-        match format {
-            TypstCompileFormat::Png => {
-                // todo
-            }
-            _ => {
-                return Err(diagnostic!(
-                    "Output format is not supported for multi-page output: {format:?}"
-                )
-                .into());
-            }
+    #[inline]
+    fn check_typst_cli_version(typst_cmd: &str) -> Result<()> {
+        let version = process::Command::new(typst_cmd)
+            .arg("--version")
+            .output()
+            .into_diagnostic()
+            .wrap_err("Failed to run typst command")?
+            .pipe(|output| {
+                output
+                    .stdout
+                    .pipe(String::from_utf8)
+                    .into_diagnostic()
+                    .wrap_err("Failed to parse typst command output as UTF-8")
+            })?
+            .pipe_as_ref(extract_version)?;
+        debug!("Using typst-cli version: {version}");
+        let req = VersionReq::parse(">=0.15.0").into_diagnostic()?;
+        let version = semver::Version::parse(&version).into_diagnostic()?;
+        if !req.matches(&version) {
+            return Err(diagnostic!(
+                "typst-cli version {version} does not satisfy requirement {req}"
+            )
+            .into());
         }
         Ok(())
     }
@@ -577,6 +667,37 @@ impl FileOrStdinExt for FileOrStdin {
             stem.to_string_lossy().into_owned()
         } else {
             default.to_owned()
+        }
+    }
+}
+
+fn extract_version(output: &str) -> Result<String> {
+    let re = Regex::new(
+        r"(?i)(?:version\s+|v)?(?P<version>\d+\.\d+\.\d+(?:-[a-zA-Z0-9.]+)?(?:\+[a-zA-Z0-9.]+)?)",
+    )
+    .into_diagnostic()?;
+
+    re.captures(output)
+        .and_then(|caps| caps.name("version").map(|m| m.as_str().to_string()))
+        .ok_or_else(|| diagnostic!("Failed to extract version from output: {}", output))
+        .into_diagnostic()
+}
+
+#[cfg(test)]
+mod tests {
+    use pretty_assertions::assert_eq;
+
+    use super::*;
+
+    #[test]
+    fn test_extract_version() {
+        let test_cases = vec![
+            ("typst 0.15.0 (unknown commit)", Some("0.15.0".to_owned())),
+            ("typst (unknown commit)", None),
+        ];
+
+        for (input, expected) in test_cases {
+            assert_eq!(extract_version(input).ok(), expected);
         }
     }
 }

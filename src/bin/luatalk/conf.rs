@@ -49,9 +49,13 @@ pub struct AppConfig {
     #[getset(get = "pub")]
     #[serde(default)]
     do_lua: DoLuaConfig,
+
+    #[getset(get = "pub")]
+    #[serde(default)]
+    do_typst_compile: DoTypstCompileConfig,
 }
 
-/// Configuration for processing Lua input file.
+/// Configuration for `do <INPUT>` command.
 #[derive(Debug, Clone, Default, Deserialize, Getters)]
 pub struct DoLuaConfig {
     /// To disable loading the `talk.lua` module.
@@ -65,4 +69,14 @@ pub struct DoLuaConfig {
     #[getset(get = "pub")]
     #[serde(default)]
     additional_path: String,
+}
+
+/// Configuration for `do <INPUT> typst-compile` command.
+#[derive(Debug, Clone, Default, Deserialize, Getters)]
+pub struct DoTypstCompileConfig {
+    /// The command to run typst-cli.
+    /// e.g. `LUATALK__DO_TYPST_COMPILE__TYPST_COMMAND='/path/to/typst-cli-dir/bin/typst'`
+    #[getset(get = "pub")]
+    #[serde(default)]
+    typst_command: String,
 }
