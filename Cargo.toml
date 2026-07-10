@@ -33,6 +33,7 @@ mlua = { version = "0.12.0", features = [
   "serde",
   "vendored",
 ] }
+path-clean = "1.0.1"
 pretty_assertions = "1.4.1"
 regex = "1.12.4"
 semver = "1.0.28"
