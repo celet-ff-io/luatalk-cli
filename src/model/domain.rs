@@ -1,5 +1,4 @@
 use std::{
-    cell::OnceCell,
     fs::{self, File},
     io,
     path::{Path, PathBuf},
@@ -9,7 +8,8 @@ use std::{
 use data_encoding::BASE64;
 use getset::Getters;
 use log::debug;
-use tap::Pipe;
+use path_clean::PathClean;
+use tap::{Pipe, Tap};
 use typed_builder::TypedBuilder;
 
 use crate::net::agent;
@@ -42,8 +42,7 @@ impl Article {
         Self { lang, pages }
     }
 
-    pub fn try_into_path_abs(self) -> Result<Self, ArticleError> {
-        let pwd = OnceCell::new();
+    pub fn try_into_path_abs(self) -> Result<Self, Error> {
         let pages = self
             .pages
             .into_iter()
@@ -51,50 +50,36 @@ impl Article {
                 let msgs = page
                     .msgs
                     .into_iter()
-                    .map(|msg| -> Result<Msg, ArticleError> {
-                        let body = match msg.body {
-                            Body::Image(image) => {
-                                let path = image.path.pipe(PathBuf::from);
-                                let path = if path.is_absolute() {
-                                    path
-                                } else {
-                                    let pwd = if let Some(pwd) = pwd.get() {
-                                        pwd
-                                    } else {
-                                        let pwd_cell = &pwd;
-                                        let pwd = std::env::current_dir()?;
-                                        pwd_cell.set(pwd).ok();
-                                        pwd_cell.get().expect("pwd should be set")
-                                    };
-                                    pwd.join(path)
-                                }
-                                .into_os_string()
-                                .into_string()
-                                .map_err(|os_str| {
-                                    ArticleError::IoError(io::Error::new(
-                                        io::ErrorKind::InvalidData,
-                                        format!("Invalid path: {:?}", os_str),
-                                    ))
-                                })?;
-                                let image_abs = ImageValue {
-                                    path,
-                                    url: image.url,
-                                };
-                                Body::Image(image_abs)
-                            }
+                    .map(|msg| {
+                        let Msg { body, profile, .. } = msg;
+                        let body = match body {
+                            Body::Image(image) => image.try_into_path_abs()?.pipe(Body::Image),
                             body => body,
                         };
-                        Msg { body, ..msg }.pipe(Ok)
+                        let profile = if let Some(profile) = profile {
+                            let profile = (*profile).clone();
+                            let Profile { avatar, .. } = profile;
+                            let avatar = avatar.try_into_path_abs()?;
+                            Profile { avatar, ..profile }.pipe(Arc::new).into()
+                        } else {
+                            None
+                        };
+                        Msg {
+                            body,
+                            profile,
+                            ..msg
+                        }
+                        .pipe(Ok)
                     })
-                    .collect::<Result<Vec<Msg>, ArticleError>>()?;
+                    .collect::<Result<Vec<Msg>, Error>>()?;
                 Page { msgs }.pipe(Ok)
             })
-            .collect::<Result<Vec<Page>, ArticleError>>()?;
+            .collect::<Result<Vec<Page>, Error>>()?;
 
         Self { pages, ..self }.pipe(Ok)
     }
 
-    pub fn try_ensure_path(&self) -> Result<(), ArticleError> {
+    pub fn try_ensure_path(&self) -> Result<(), Error> {
         for page in &self.pages {
             for msg in &page.msgs {
                 if let Body::Image(image) = &msg.body {
@@ -104,15 +89,6 @@ impl Article {
         }
         Ok(())
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum ArticleError {
-    #[error("File system IO error occurred: {0}")]
-    IoError(#[from] io::Error),
-
-    #[error(transparent)]
-    ImageFetchError(#[from] ImageValueError),
 }
 
 impl InLang for Article {
@@ -262,7 +238,7 @@ impl ImageValue {
 
     /// Try to fetch the image from URL to the path
     /// if the file does not exist.
-    pub fn try_ensure_path(&self) -> Result<(), ImageValueError> {
+    pub fn try_ensure_path(&self) -> Result<(), Error> {
         let Self { path, url } = self;
         let path = Path::new(path);
         if !path.exists() {
@@ -289,19 +265,44 @@ impl ImageValue {
         Ok(())
     }
 
-    pub fn try_generate_data_url(&self) -> Result<String, ImageValueError> {
+    pub fn try_into_path_abs(self) -> Result<Self, Error> {
+        let path = self.path.pipe(PathBuf::from);
+        let path = if path.is_absolute() {
+            path
+        } else {
+            let pwd = std::env::current_dir()?;
+            pwd.join(&path).clean().tap(|path_abs| {
+                debug!(
+                    "Resolved relative path {} to absolute: {}",
+                    path.display(),
+                    path_abs.display(),
+                )
+            })
+        }
+        .into_os_string()
+        .into_string()
+        .map_err(|os_str| {
+            Error::FsIoError(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Invalid path: {:?}", os_str),
+            ))
+        })?;
+        Self { path, ..self }.pipe(Ok)
+    }
+
+    pub fn try_generate_data_url(&self) -> Result<String, Error> {
         let path = self.path();
         let mime_type = path
             .pipe(mime_guess::from_path)
             .first()
-            .ok_or(ImageValueError::MimeTypeNotFound(path.to_owned()))?;
+            .ok_or(Error::MimeTypeNotFound(path.to_owned()))?;
         let encoded = fs::read(path)?.pipe(|bytes| BASE64.encode(&bytes));
         format!("data:{};base64,{}", mime_type, encoded).pipe(Ok)
     }
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum ImageValueError {
+pub enum Error {
     #[error("File system IO error occurred: {0}")]
     FsIoError(#[from] std::io::Error),
 

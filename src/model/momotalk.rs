@@ -202,7 +202,7 @@ pub enum MomotalkExportError {
     InvaildContentType,
 
     #[error("ImageValue error: {0}")]
-    ImageValueError(#[from] domain::ImageValueError),
+    ImageValueError(#[from] domain::Error),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

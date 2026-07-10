@@ -270,6 +270,7 @@ pub mod do_ {
             /// or a format string with placeholder `p` for page number starts from 1.
             /// e.g. 'article_{p}.json'.
             /// None stands for directory named after stem portion of input file name.
+            #[arg(short, long)]
             output: Option<String>,
 
             /// Output format. Defaults to be None,
@@ -282,6 +283,11 @@ pub mod do_ {
 
             #[command(flatten)]
             url_fetch_options: UrlFetchOptionsArgs,
+
+            /// **FOR DEBUG**.
+            /// Keep temporary files created in system temporary directory.
+            #[arg(long)]
+            keep_temp: bool,
         },
 
         /// Momotalk export JSON format for 'https://github.com/U1805/momotalk'

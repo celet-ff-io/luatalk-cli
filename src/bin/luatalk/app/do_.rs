@@ -73,6 +73,7 @@ pub enum OutputAction {
         format: Option<TypstCompileFormat>,
         options: TypstOutputOptions,
         url_fetch_options: UrlFetchOptions,
+        keep_temp: bool,
     },
     Momotalk {
         output: Option<FileOrStdout>,
@@ -99,11 +100,13 @@ impl From<OutputCommand> for OutputAction {
                 format,
                 options,
                 url_fetch_options,
+                keep_temp,
             } => Self::TypstCompile {
                 output,
                 format: format.map(Into::into),
                 options: options.into(),
                 url_fetch_options: url_fetch_options.into(),
+                keep_temp,
             },
             OutputCommand::Momotalk { output, pl } => Self::Momotalk {
                 output,
@@ -253,9 +256,14 @@ impl Runnable for App<state::OfArticle> {
                     format,
                     options,
                     url_fetch_options,
-                } => {
-                    self.output_typst_compile(output.as_ref(), *format, options, url_fetch_options)
-                }
+                    keep_temp,
+                } => self.output_typst_compile(
+                    output.as_ref(),
+                    *format,
+                    options,
+                    url_fetch_options,
+                    *keep_temp,
+                ),
                 OutputAction::Momotalk { output, plurality } => {
                     self.output_momotalk(output.as_ref(), plurality)
                 }
@@ -326,6 +334,7 @@ impl App<state::OfArticle> {
         format: Option<TypstCompileFormat>,
         config: &TypstOutputOptions,
         url_fetch_options: &UrlFetchOptions,
+        keep_temp: bool,
     ) -> Result<()> {
         // Inputs
         let format: TypstCompileFormat = if let Some(format) = format {
@@ -420,44 +429,52 @@ or specify the command with `LUATALK__DO_TYPS_COMPILE__TYPST_COMMAND` environmen
             .wrap_err("Failed to convert paths to absolute paths")?;
         debug!("Build article of absolute paths success");
 
+        let tmp_dir = tempfile::Builder::new()
+            .prefix("luatalk-do-typst-compile-")
+            .tempdir()
+            .into_diagnostic()
+            .wrap_err("Failed to create temporary directory for typst compilation")?;
+        let tmp_dir_path = if keep_temp {
+            &tmp_dir
+                .keep()
+                .tap(|path| eprintln!("Keep temp directory: {}", path.display()))
+        } else {
+            tmp_dir
+                .path()
+                .tap(|path| debug!("Creating temp directory: {}", path.display()))
+        };
+        debug!("Create temp .json file");
         let article_dto: dto::Article = article.clone().into();
-        let mut temp_json = tempfile::Builder::new()
-            .prefix("luatalk-output")
-            .suffix(".json")
-            .tempfile()
+
+        debug!("{article_dto:#?}");
+
+        const JSON_FILE_NAME: &str = formatcp!("{DEFAULT_OUTPUT_STEM}.json");
+        let mut tmp_json = tmp_dir_path
+            .join(JSON_FILE_NAME)
+            .pipe_ref(fs::File::create)
             .into_diagnostic()?;
-        Self::output_json_to_writer(&mut temp_json, &article_dto)?;
-        debug!("Temporary JSON file path: {}", temp_json.path().display());
-        let temp_json_path = temp_json.path().to_str().ok_or_else(|| {
-            diagnostic!(
-                "Temporary JSON file path is not valid UTF-8: {}",
-                temp_json.path().display()
-            )
-        })?;
-        let mut temp_typ = tempfile::Builder::new()
-            .prefix("luatalk-output")
-            .suffix(".typ")
-            .tempfile()
-            .into_diagnostic()?;
-        debug!("Temporary Typst file path: {}", temp_typ.path().display());
-        Self::output_typst(&mut temp_typ, temp_json_path, config)?;
+        Self::output_json_to_writer(&mut tmp_json, &article_dto)?;
+        debug!("Create temp .typ file");
+        let tmp_typ_path = tmp_dir_path.join(format!("{DEFAULT_OUTPUT_STEM}.typ"));
+        let mut tmp_typ = tmp_typ_path.pipe_ref(fs::File::create).into_diagnostic()?;
+        Self::output_typst(&mut tmp_typ, JSON_FILE_NAME, config)?;
 
         if !url_fetch_options.offline {
             // Fetch data from URL if needed
+            debug!("Ensuring res available from URL");
             article.try_ensure_path().into_diagnostic()?;
         }
 
         // Run typst-cli
         let output = process::Command::new(typst_command)
             .arg("compile")
-            .arg(temp_typ.path())
-            .arg("--output")
-            .arg(&output)
             .arg("--format")
             .arg(match format {
                 TypstCompileFormat::Pdf => "pdf",
                 TypstCompileFormat::Png => "png",
             })
+            .arg(tmp_typ_path)
+            .arg(&output)
             .output()
             .into_diagnostic()
             .wrap_err("Failed to run typst command")?;
