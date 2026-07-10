@@ -15,7 +15,7 @@
 //! let lua = Lua::new();
 //! lua.load_default_lib().unwrap();
 //!
-//! let chunk = luatalk::assets::lua::input::EXAMPLE_EN;
+//! let chunk = luatalk::assets::lua::input::example_en();
 //! let got: Article = dto::Article::try_from_chunk(chunk, &lua)
 //!     .unwrap()
 //!     .try_into()
