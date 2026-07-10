@@ -1,7 +1,8 @@
 use std::{
+    cell::OnceCell,
     fs::{self, File},
     io,
-    path::Path,
+    path::{Path, PathBuf},
     sync::Arc,
 };
 
@@ -40,6 +41,64 @@ impl Article {
 
         Self { lang, pages }
     }
+
+    pub fn try_into_path_abs(self) -> Result<Self, ArticleError> {
+        let pwd = OnceCell::new();
+        let pages = self
+            .pages
+            .into_iter()
+            .map(|page| {
+                let msgs = page
+                    .msgs
+                    .into_iter()
+                    .map(|msg| -> Result<Msg, ArticleError> {
+                        let body = match msg.body {
+                            Body::Image(image) => {
+                                let path = image.path.pipe(PathBuf::from);
+                                let path = if path.is_absolute() {
+                                    path
+                                } else {
+                                    let pwd = if let Some(pwd) = pwd.get() {
+                                        pwd
+                                    } else {
+                                        let pwd_cell = &pwd;
+                                        let pwd = std::env::current_dir()?;
+                                        pwd_cell.set(pwd).ok();
+                                        pwd_cell.get().expect("pwd should be set")
+                                    };
+                                    pwd.join(path)
+                                }
+                                .into_os_string()
+                                .into_string()
+                                .map_err(|os_str| {
+                                    ArticleError::IoError(io::Error::new(
+                                        io::ErrorKind::InvalidData,
+                                        format!("Invalid path: {:?}", os_str),
+                                    ))
+                                })?;
+                                let image_abs = ImageValue {
+                                    path,
+                                    url: image.url,
+                                };
+                                Body::Image(image_abs)
+                            }
+                            body => body,
+                        };
+                        Msg { body, ..msg }.pipe(Ok)
+                    })
+                    .collect::<Result<Vec<Msg>, ArticleError>>()?;
+                Page { msgs }.pipe(Ok)
+            })
+            .collect::<Result<Vec<Page>, ArticleError>>()?;
+
+        Self { pages, ..self }.pipe(Ok)
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ArticleError {
+    #[error("File system IO error occurred: {0}")]
+    IoError(#[from] io::Error),
 }
 
 impl InLang for Article {
