@@ -7,8 +7,9 @@ Build article from Lua file.
 
 ## TODO
 
-- Make article exportable to Typst code
-  to make it easy to render as pictures page by page.
+- Complete README and USAGE.
+- Make different localization for different languages for help,
+  if possible.
 
 ## Features
 

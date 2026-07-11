@@ -418,7 +418,7 @@ impl App<state::OfArticle> {
             let path = which::which("typst").into_diagnostic().wrap_err(
                 "Cannot find typst command in PATH.
 Please install typst-cli (e.g. `cargo install typst-cli`) to PATH,
-or specify the command with `LUATALK__DO_TYPS_COMPILE__TYPST_COMMAND` environment variable.",
+or specify the command with `LUATALK__DO_TYPST_COMPILE__TYPST_COMMAND` environment variable.",
             )?;
             eprintln!("Run typst-cli: {}", path.display());
         }

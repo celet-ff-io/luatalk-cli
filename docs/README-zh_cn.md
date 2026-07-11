@@ -7,7 +7,9 @@
 
 ## TODO
 
-- 支持导出为 Typst 代码，以便逐页渲染为图片。
+- Complete README and USAGE.
+- Make different localization for different languages for help,
+  if possible.
 
 ## 特性
 

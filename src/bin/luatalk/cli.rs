@@ -197,12 +197,19 @@ pub mod generate {
         };
         println!(
             "{h}Via environment variables:{r}
+
 {l}LUATALK{r}
   {l}DO_LUA{r}
     {l}NO_DEFAULT_LIB{r}: To disable loading the `talk.lua` module
       LUATALK__DO_LUA__NO_DEFAULT_LIB={p}1{r}
     {l}ADDITIONAL_PATH{r}: Additional Lua search paths which will be appended before the default search paths
-      LUATALK__DO_LUA__ADDITIONAL_PATH={p}'/path/to/lib/?.lua;/path/to/lib/?/init.lua;'{r}"
+      LUATALK__DO_LUA__ADDITIONAL_PATH={p}'/path/to/lib/?.lua;/path/to/lib/?/init.lua;'{r}
+  {l}DO_JSON{r}
+    {l}MINIFY{r}: To minify the JSON output
+      LUATALK__DO_JSON__MINIFY={p}1{r}
+  {l}DO_TYPST_COMPILE{r}
+    {l}TYPST_COMMAND{r}: The command to run typst-cli
+      LUATALK__DO_TYPST_COMPILE__TYPST_COMMAND={p}'/path/to/typst-cli-dir/bin/typst'{r}"
         );
     }
 }
