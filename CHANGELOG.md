@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `do <INPUT> typst-compile` should create parent directories
+  for output file if not exist.
+
 ## [0.3.0-alpha.5] - 2026-07-11
 
 ### Added

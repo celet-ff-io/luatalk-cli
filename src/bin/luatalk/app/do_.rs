@@ -484,7 +484,13 @@ or specify the command with `LUATALK__DO_TYPST_COMPILE__TYPST_COMMAND` environme
         // Do not run typst-cli if error occurred in fetching
         ensure_result?;
 
-        // Run typst-cli
+        // Run typst-cli to output
+
+        output
+            .pipe_ref(Path::new)
+            .parent()
+            .map(Self::check_or_create_dir)
+            .transpose()?;
         let output = process::Command::new(typst_command)
             .arg("compile")
             .arg("--format")
