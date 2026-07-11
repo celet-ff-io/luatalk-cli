@@ -52,6 +52,10 @@ pub struct AppConfig {
 
     #[getset(get = "pub")]
     #[serde(default)]
+    do_json: DoJsonConfig,
+
+    #[getset(get = "pub")]
+    #[serde(default)]
     do_typst_compile: DoTypstCompileConfig,
 }
 
@@ -69,6 +73,18 @@ pub struct DoLuaConfig {
     #[getset(get = "pub")]
     #[serde(default)]
     additional_path: String,
+}
+
+/// Configuration for `do <INPUT> json` command,
+/// and also the commands which outputs JSON,
+/// e.g. `do <INPUT> typst-compile`.
+#[derive(Debug, Clone, Default, Deserialize, Getters)]
+pub struct DoJsonConfig {
+    /// To minify the JSON output.
+    /// e.g. `LUATALK__DO_JSON__MINIFY=1`
+    #[getset(get = "pub")]
+    #[serde(default)]
+    minify: bool,
 }
 
 /// Configuration for `do <INPUT> typst-compile` command.

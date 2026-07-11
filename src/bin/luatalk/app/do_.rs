@@ -675,7 +675,12 @@ or specify the command with `LUATALK__DO_TYPS_COMPILE__TYPST_COMMAND` environmen
         mut writer: &mut impl Write,
         value: &impl serde::Serialize,
     ) -> Result<()> {
-        serde_json::to_writer_pretty(&mut writer, value).into_diagnostic()?;
+        if *conf::app_config().do_json().minify() {
+            serde_json::to_writer(&mut writer, value)
+        } else {
+            serde_json::to_writer_pretty(&mut writer, value)
+        }
+        .into_diagnostic()?;
         writer.write_all(b"\n").into_diagnostic()?;
         writer.flush().into_diagnostic()
     }

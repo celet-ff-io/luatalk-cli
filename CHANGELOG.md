@@ -15,8 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `do <INPUT> typst` to generate Typst code and JSON at one time.
   `--stem` to specify the output file name stem.
   Also shares the options of `generate typst` subcommand.
-- `--ofline` option to disable any fetching image from URL.
+- `--offline` option to disable any fetching image from URL.
 - `-o/--output` option for `generate`.
+- Use `LUATALK__DO_JSON__MINIFY` to minify JSON output.
 
 ### Changed
 
