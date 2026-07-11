@@ -2,16 +2,18 @@
 use std::{
     cell::LazyCell,
     collections::HashMap,
-    fs,
+    fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
     process,
     rc::Rc,
+    result,
     str::FromStr,
 };
 
 use clap_stdin::{FileOrStdin, FileOrStdout};
 use const_format::formatcp;
+use data_encoding::BASE32HEX_NOPAD;
 use log::{debug, error, warn};
 use miette::{IntoDiagnostic, Result, WrapErr, diagnostic};
 use mlua::Lua;
@@ -20,6 +22,8 @@ use semver::VersionReq;
 use tap::{Pipe, Tap};
 
 use luatalk::{Article, InLang, IntoAndLang, LuaExt, dto, momotalk};
+use tempfile::NamedTempFile;
+use xxhash_rust::xxh3::xxh3_64;
 
 use crate::{
     app::{
@@ -296,14 +300,20 @@ impl App<state::OfArticle> {
         url_fetch_options: &UrlFetchOptions,
     ) -> Result<()> {
         let article = self.state.article;
+        let ensure_result = if url_fetch_options.offline {
+            Ok(())
+        } else {
+            // Fetch data from URL if needed
+            article.try_ensure_path().into_diagnostic()
+        };
         let stem = stem
             .cloned()
             .unwrap_or_else(|| self.state.input.file_stem_or(DEFAULT_OUTPUT_STEM));
         let data_filename = {
-            let article_dto: dto::Article = article.clone().into();
             let path = stem.pipe_ref(Path::new).with_extension("json");
             let mut writer = path.to_writer()?;
-            Self::output_json_to_writer(&mut writer, &article_dto)?;
+            let article: dto::Article = article.into();
+            Self::output_json_to_writer(&mut writer, &article)?;
             eprintln!("Output JSON file: {}", path.display());
 
             let filename = path
@@ -320,11 +330,7 @@ impl App<state::OfArticle> {
             Self::output_typst(&mut writer, &data_filename, config)?;
             eprintln!("Output Typst file: {}", path.display());
         }
-        if url_fetch_options.offline {
-            // Fetch data from URL if needed
-            article.try_ensure_path().into_diagnostic()?;
-        }
-        Ok(())
+        ensure_result
     }
 
     #[inline]
@@ -421,49 +427,62 @@ or specify the command with `LUATALK__DO_TYPS_COMPILE__TYPST_COMMAND` environmen
             warn!("Checking typst-cli version failed: {err:?}");
         }
 
-        let article = self
-            .state
-            .article
-            .try_into_path_abs()
-            .into_diagnostic()
-            .wrap_err("Failed to convert paths to absolute paths")?;
+        let article = self.state.article;
         debug!("Build article of absolute paths success");
 
-        let tmp_dir = tempfile::Builder::new()
-            .prefix("luatalk-do-typst-compile-")
-            .tempdir()
-            .into_diagnostic()
-            .wrap_err("Failed to create temporary directory for typst compilation")?;
-        let tmp_dir_path = if keep_temp {
-            &tmp_dir
-                .keep()
-                .tap(|path| eprintln!("Keep temp directory: {}", path.display()))
+        let ensure_result = if url_fetch_options.offline {
+            Ok(())
         } else {
-            tmp_dir
-                .path()
-                .tap(|path| debug!("Creating temp directory: {}", path.display()))
-        };
-        debug!("Create temp .json file");
-        let article_dto: dto::Article = article.clone().into();
-
-        debug!("{article_dto:#?}");
-
-        const JSON_FILE_NAME: &str = formatcp!("{DEFAULT_OUTPUT_STEM}.json");
-        let mut tmp_json = tmp_dir_path
-            .join(JSON_FILE_NAME)
-            .pipe_ref(fs::File::create)
-            .into_diagnostic()?;
-        Self::output_json_to_writer(&mut tmp_json, &article_dto)?;
-        debug!("Create temp .typ file");
-        let tmp_typ_path = tmp_dir_path.join(format!("{DEFAULT_OUTPUT_STEM}.typ"));
-        let mut tmp_typ = tmp_typ_path.pipe_ref(fs::File::create).into_diagnostic()?;
-        Self::output_typst(&mut tmp_typ, JSON_FILE_NAME, config)?;
-
-        if !url_fetch_options.offline {
             // Fetch data from URL if needed
             debug!("Ensuring res available from URL");
-            article.try_ensure_path().into_diagnostic()?;
-        }
+            article.try_ensure_path().into_diagnostic()
+        };
+
+        let article: dto::Article = article.into();
+        let article_json = article.pipe_ref(Self::output_json_to_vec)?;
+        let prefix = {
+            let article_hash = article_json
+                .pipe_as_ref(xxh3_64)
+                .to_be_bytes()
+                .pipe_ref(|b| BASE32HEX_NOPAD.encode(b));
+            format!("{DEFAULT_OUTPUT_STEM}-{article_hash}-")
+        };
+
+        let pwd = std::env::current_dir()
+            .into_diagnostic()
+            .wrap_err("Failed to get current working directory")?;
+        // .json
+        let mut kept_tmp_json = KeptTmp::try_new_kept_tmp(keep_temp, &pwd, &prefix, ".json")?;
+        let tmp_json_file = kept_tmp_json.as_file_mut();
+        tmp_json_file.write_all(&article_json).into_diagnostic()?;
+        tmp_json_file.flush().into_diagnostic()?;
+        let tmp_json_path = kept_tmp_json.path();
+        debug!("Created temp .json file: {}", tmp_json_path.display());
+        let tmp_json_file_name = tmp_json_path
+            .file_name()
+            .ok_or_else(|| {
+                diagnostic!(
+                    "Failed to get file name of temp .json file: {}",
+                    tmp_json_path.display()
+                )
+            })?
+            .to_str()
+            .ok_or_else(|| {
+                diagnostic!(
+                    "Failed to convert file name of temp .json file to UTF-8: {}",
+                    tmp_json_path.display()
+                )
+            })?
+            .to_owned();
+        // .typ
+        let mut kept_tmp_typ = KeptTmp::try_new_kept_tmp(keep_temp, &pwd, &prefix, ".typ")?;
+        let tmp_typ_file = kept_tmp_typ.as_file_mut();
+        Self::output_typst(tmp_typ_file, &tmp_json_file_name, config)?;
+        let tmp_typ_path = kept_tmp_typ.path();
+        debug!("Created temp .typ file: {}", tmp_typ_path.display());
+
+        // Do not run typst-cli if error occurred in fetching
+        ensure_result?;
 
         // Run typst-cli
         let output = process::Command::new(typst_command)
@@ -652,14 +671,19 @@ or specify the command with `LUATALK__DO_TYPS_COMPILE__TYPST_COMMAND` environmen
         self.state.input.file_stem_or(DEFAULT_OUTPUT_STEM)
     }
 
-    fn output_json_to_writer<W, T>(mut writer: &mut W, value: &T) -> Result<()>
-    where
-        W: Write,
-        T: ?Sized + serde::Serialize,
-    {
+    fn output_json_to_writer(
+        mut writer: &mut impl Write,
+        value: &impl serde::Serialize,
+    ) -> Result<()> {
         serde_json::to_writer_pretty(&mut writer, value).into_diagnostic()?;
         writer.write_all(b"\n").into_diagnostic()?;
         writer.flush().into_diagnostic()
+    }
+
+    fn output_json_to_vec(value: &impl serde::Serialize) -> Result<Vec<u8>> {
+        let mut writer = Vec::with_capacity(128);
+        Self::output_json_to_writer(&mut writer, value)?;
+        Ok(writer)
     }
 
     fn check_or_create_dir(path: &Path) -> Result<()> {
@@ -727,6 +751,53 @@ impl FileOrStdinExt for FileOrStdin {
             stem.to_string_lossy().into_owned()
         } else {
             default.to_owned()
+        }
+    }
+}
+
+trait KeptTmpExt {
+    fn try_new_kept_tmp(keep_temp: bool, dir: &Path, prefix: &str, suffix: &str)
+    -> Result<KeptTmp>;
+
+    fn path(&self) -> &Path;
+
+    fn as_file_mut(&mut self) -> &mut File;
+}
+
+type KeptTmp = result::Result<(File, PathBuf), NamedTempFile>;
+
+impl KeptTmpExt for KeptTmp {
+    fn try_new_kept_tmp(
+        keep_temp: bool,
+        dir: &Path,
+        prefix: &str,
+        suffix: &str,
+    ) -> Result<KeptTmp> {
+        let tmp = tempfile::Builder::new()
+            .prefix(prefix)
+            .suffix(suffix)
+            .tempfile_in(dir)
+            .into_diagnostic()?;
+
+        if keep_temp {
+            tmp.keep().into_diagnostic()?.pipe(Ok)
+        } else {
+            tmp.pipe(Err)
+        }
+        .pipe(Ok)
+    }
+
+    fn path(&self) -> &Path {
+        match self {
+            Ok((_, path)) => path.as_path(),
+            Err(tmp) => tmp.path(),
+        }
+    }
+
+    fn as_file_mut(&mut self) -> &mut File {
+        match self {
+            Ok((file, _)) => file,
+            Err(tmp) => tmp.as_file_mut(),
         }
     }
 }

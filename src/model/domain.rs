@@ -42,6 +42,8 @@ impl Article {
         Self { lang, pages }
     }
 
+    /// It is not useful currently,
+    /// since typst-cli does not accept absolute paths in FS.
     pub fn try_into_path_abs(self) -> Result<Self, Error> {
         let pages = self
             .pages
