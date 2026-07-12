@@ -60,9 +60,10 @@ pub enum ExampleLang {
 
 impl From<ExampleLangArg> for ExampleLang {
     fn from(value: ExampleLangArg) -> Self {
+        use ExampleLangArg as Arg;
         match value {
-            ExampleLangArg::En => Self::En,
-            ExampleLangArg::ZhHans => Self::ZhHans,
+            Arg::En => Self::En,
+            Arg::ZhHans => Self::ZhHans,
         }
     }
 }
@@ -108,15 +109,16 @@ pub enum Asset {
 
 impl From<AssetArg> for Asset {
     fn from(value: AssetArg) -> Self {
+        use AssetArg as Arg;
         match value {
-            AssetArg::LuaInputExampleEn => Self::LuaInputExampleEn,
-            AssetArg::LuaInputExampleZhHans => Self::LuaInputExampleZhHans,
-            AssetArg::LuaLibTalk => Self::LuaLibTalk,
-            AssetArg::TypstOutput => Self::TypstOutput,
-            AssetArg::LicenseNotice => Self::LicenseNotice,
-            AssetArg::LicenseApache => Self::LicenseApache,
-            AssetArg::LicenseMit => Self::LicenseMit,
-            AssetArg::LicenseHtml => Self::LicenseHtml,
+            Arg::LuaInputExampleEn => Self::LuaInputExampleEn,
+            Arg::LuaInputExampleZhHans => Self::LuaInputExampleZhHans,
+            Arg::LuaLibTalk => Self::LuaLibTalk,
+            Arg::TypstOutput => Self::TypstOutput,
+            Arg::LicenseNotice => Self::LicenseNotice,
+            Arg::LicenseApache => Self::LicenseApache,
+            Arg::LicenseMit => Self::LicenseMit,
+            Arg::LicenseHtml => Self::LicenseHtml,
         }
     }
 }
@@ -131,11 +133,12 @@ pub enum License {
 
 impl From<LicenseArg> for License {
     fn from(value: LicenseArg) -> Self {
+        use LicenseArg as Arg;
         match value {
-            LicenseArg::Notice => Self::Notice,
-            LicenseArg::Apache => Self::Apache,
-            LicenseArg::Mit => Self::Mit,
-            LicenseArg::ThirdPartyLicenses => Self::ThirdPartyLicenses,
+            Arg::Notice => Self::Notice,
+            Arg::Apache => Self::Apache,
+            Arg::Mit => Self::Mit,
+            Arg::ThirdPartyLicenses => Self::ThirdPartyLicenses,
         }
     }
 }
@@ -146,11 +149,13 @@ impl App<state::Initial> {
     pub fn run_generate(self, output: &FileOrStdout, action: &GenerateAction) -> Result<()> {
         let mut w = output.clone_to_output_writer()?;
         match action {
-            GenerateAction::Example { lang } => match lang {
-                ExampleLang::En => w.output_str(assets::lua::input::example_en())?,
-
-                ExampleLang::ZhHans => w.output_str(assets::lua::input::example_zh_hans())?,
-            },
+            GenerateAction::Example { lang } => {
+                use ExampleLang::*;
+                match lang {
+                    En => w.output_str(assets::lua::input::example_en())?,
+                    ZhHans => w.output_str(assets::lua::input::example_zh_hans())?,
+                }
+            }
 
             GenerateAction::Typst { data, options } => {
                 Self::output_typst(&mut stdout(), data, options)?
@@ -158,29 +163,33 @@ impl App<state::Initial> {
 
             GenerateAction::Completion { shell } => generate::completion(*shell, &mut io::stdout()),
 
-            GenerateAction::Asset { asset } => match asset {
-                Asset::LuaInputExampleEn => w.output_str(assets::lua::input::example_en())?,
-                Asset::LuaInputExampleZhHans => {
-                    w.output_str(assets::lua::input::example_zh_hans())?
+            GenerateAction::Asset { asset } => {
+                use Asset::*;
+                match asset {
+                    LuaInputExampleEn => w.output_str(assets::lua::input::example_en())?,
+                    LuaInputExampleZhHans => w.output_str(assets::lua::input::example_zh_hans())?,
+                    LuaLibTalk => w.output_str(assets::lua::lib::talk())?,
+
+                    TypstOutput => w.output_str(assets::typst::output())?,
+
+                    LicenseNotice => w.output_str(assets::license::notice())?,
+                    LicenseApache => w.output_str(assets::license::license_apache())?,
+                    LicenseMit => w.output_str(assets::license::license_mit())?,
+                    LicenseHtml => w.output_str(assets::license::license_html())?,
                 }
-                Asset::LuaLibTalk => w.output_str(assets::lua::lib::talk())?,
-
-                Asset::TypstOutput => w.output_str(assets::typst::output())?,
-
-                Asset::LicenseNotice => w.output_str(assets::license::notice())?,
-                Asset::LicenseApache => w.output_str(assets::license::license_apache())?,
-                Asset::LicenseMit => w.output_str(assets::license::license_mit())?,
-                Asset::LicenseHtml => w.output_str(assets::license::license_html())?,
-            },
+            }
 
             GenerateAction::ConfigHelp => generate::help_config(),
 
-            GenerateAction::License { license } => match license {
-                License::Notice => w.output_str(assets::license::notice())?,
-                License::Apache => w.output_str(assets::license::license_apache())?,
-                License::Mit => w.output_str(assets::license::license_mit())?,
-                License::ThirdPartyLicenses => w.output_str(assets::license::license_html())?,
-            },
+            GenerateAction::License { license } => {
+                use License::*;
+                match license {
+                    Notice => w.output_str(assets::license::notice())?,
+                    Apache => w.output_str(assets::license::license_apache())?,
+                    Mit => w.output_str(assets::license::license_mit())?,
+                    ThirdPartyLicenses => w.output_str(assets::license::license_html())?,
+                }
+            }
         }
         Ok(())
     }
