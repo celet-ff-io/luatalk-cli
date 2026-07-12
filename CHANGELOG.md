@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Make `do generate` supports system locale.
+
 ### Fixed
 
 - `do <INPUT> typst-compile` should create parent directories

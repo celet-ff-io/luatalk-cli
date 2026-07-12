@@ -9,12 +9,14 @@ use luatalk::assets;
 use crate::{
     app::{App, common::FileOrStdoutExt, state},
     cli::generate::{self, AssetArg, Command, ExampleLangArg, LicenseArg, TypstOutputOptionsArgs},
+    conf,
+    locale::SupportedLang,
 };
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum GenerateAction {
     Example {
-        lang: ExampleLang,
+        lang: Option<ExampleLang>,
     },
     Typst {
         data: String,
@@ -35,7 +37,9 @@ pub enum GenerateAction {
 impl From<Command> for GenerateAction {
     fn from(value: Command) -> Self {
         match value {
-            Command::Example { lang } => Self::Example { lang: lang.into() },
+            Command::Example { lang } => Self::Example {
+                lang: lang.map(Into::into),
+            },
             Command::Typst { data, options } => Self::Typst {
                 data,
                 options: options.into(),
@@ -64,6 +68,16 @@ impl From<ExampleLangArg> for ExampleLang {
         match value {
             Arg::En => Self::En,
             Arg::ZhHans => Self::ZhHans,
+        }
+    }
+}
+
+impl From<SupportedLang> for ExampleLang {
+    fn from(value: SupportedLang) -> Self {
+        use SupportedLang as Lang;
+        match value {
+            Lang::En => Self::En,
+            Lang::ZhHans => Self::ZhHans,
         }
     }
 }
@@ -150,6 +164,7 @@ impl App<state::Initial> {
         let mut w = output.clone_to_output_writer()?;
         match action {
             GenerateAction::Example { lang } => {
+                let lang = lang.unwrap_or_else(|| conf::lang().into());
                 use ExampleLang::*;
                 match lang {
                     En => w.output_str(assets::lua::input::example_en())?,

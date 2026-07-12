@@ -1,4 +1,4 @@
-use std::sync::OnceLock;
+use std::sync::{LazyLock, OnceLock};
 
 use config::{Config, Environment};
 use getset::Getters;
@@ -6,7 +6,19 @@ use log::debug;
 use miette::{IntoDiagnostic, Result, miette};
 use serde::Deserialize;
 
+use crate::locale::SupportedLang;
+
+static LANG: LazyLock<SupportedLang> = LazyLock::new(|| {
+    sys_locale::get_locale()
+        .map(|l| l.as_str().into())
+        .unwrap_or_default()
+});
+
 static APP_CONFIG: OnceLock<AppConfig> = OnceLock::new();
+
+pub fn lang() -> SupportedLang {
+    *LANG
+}
 
 /// Initializes the application configuration from environment variables.
 /// Should be called only once at the beginning of the program.

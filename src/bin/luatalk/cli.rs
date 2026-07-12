@@ -79,8 +79,9 @@ pub mod generate {
     pub enum Command {
         /// Example input Lua file.
         Example {
-            #[arg(default_value = "en")]
-            lang: ExampleLangArg,
+            /// Leave empty to let the program choose the language automatically,
+            /// based on the system locale.
+            lang: Option<ExampleLangArg>,
         },
 
         /// Generate a Typst file to render article, from the base Typst file in asset.

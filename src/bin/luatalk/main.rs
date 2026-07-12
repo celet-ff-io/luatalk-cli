@@ -10,15 +10,12 @@ use tap::Pipe;
 use crate::{
     app::{App, Runnable},
     cli::AppArgs,
-    locale::{Localize, SupportedLang},
+    locale::Localize,
 };
 
 fn main() -> Result<()> {
-    let lang: SupportedLang = sys_locale::get_locale()
-        .map(|l| l.as_str().into())
-        .unwrap_or_default();
     AppArgs::command()
-        .localize(lang)
+        .localize(conf::lang())
         .get_matches()
         .pipe_ref_mut(AppArgs::from_arg_matches_mut)
         .map_err(|e| e.format(&mut AppArgs::command()))
