@@ -19,7 +19,9 @@ fn styles() -> Styles {
     STYLES.clone()
 }
 
-/// Build article from Lua file (using Lua 5.5).
+/// Build article from Lua file.
+///
+/// Lua 5.5 is supported.
 #[derive(Debug, Parser)]
 #[command(version)]
 #[command(styles = styles())]
@@ -72,6 +74,8 @@ pub enum AppCommand {
 
 pub mod generate {
     use std::io::{self, IsTerminal};
+
+    use crate::{conf, locale::SupportedLang};
 
     use super::*;
 
@@ -196,8 +200,10 @@ pub mod generate {
             p = String::new();
             r = String::new();
         };
-        println!(
-            "{h}Via environment variables:{r}
+        use SupportedLang::*;
+        match conf::lang() {
+            En => {
+                println!("{h}Via environment variables:{r}
 
 {l}LUATALK{r}
   {l}DO_LUA{r}
@@ -209,9 +215,30 @@ pub mod generate {
     {l}MINIFY{r}: To minify the JSON output
       LUATALK__DO_JSON__MINIFY={p}1{r}
   {l}DO_TYPST_COMPILE{r}
-    {l}TYPST_COMMAND{r}: The command to run typst-cli
+    {l}TYPST_COMMAND{r}: The command to run typst-cli. Leave empty to use `typst`
       LUATALK__DO_TYPST_COMPILE__TYPST_COMMAND={p}'/path/to/typst-cli-dir/bin/typst'{r}"
-        );
+                );
+            }
+
+            ZhHans => {
+                println!(
+                    "{h}通过环境变量配置:{r}
+
+{l}LUATALK{r}
+  {l}DO_LUA{r}
+    {l}NO_DEFAULT_LIB{r}: 禁用加载 `talk.lua` 模块
+      LUATALK__DO_LUA__NO_DEFAULT_LIB={p}1{r}
+    {l}ADDITIONAL_PATH{r}: 额外的 Lua 搜索路径
+      LUATALK__DO_LUA__ADDITIONAL_PATH={p}'/path/to/lib/?.lua;/path/to/lib/?/init.lua;'{r}
+  {l}DO_JSON{r}
+    {l}MINIFY{r}: 压缩 JSON 输出
+      LUATALK__DO_JSON__MINIFY={p}1{r}
+  {l}DO_TYPST_COMPILE{r}
+    {l}TYPST_COMMAND{r}: 自定义运行 typst-cli 的命令。留空则使用 `typst`
+      LUATALK__DO_TYPST_COMPILE__TYPST_COMMAND={p}'/path/to/typst-cli-dir/bin/typst'{r}"
+                );
+            }
+        }
     }
 }
 
@@ -267,7 +294,7 @@ pub mod do_ {
         /// Note that typst-cli supports environment variables for some options,
         /// you may use them to configure some advanced typst-cli options.
         /// For more advanced typst-cli usage, or useful features like `typst watch`,
-        /// please use `do <INPU> typst` and manually run typst-cli.
+        /// please use `do <INPUT> typst` and manually run typst-cli.
         TypstCompile {
             /// Ouptut. Defaults to None.
             ///

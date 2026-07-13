@@ -102,7 +102,7 @@ pub struct DoJsonConfig {
 /// Configuration for `do <INPUT> typst-compile` command.
 #[derive(Debug, Clone, Default, Deserialize, Getters)]
 pub struct DoTypstCompileConfig {
-    /// The command to run typst-cli.
+    /// The command to run typst-cli. Leave empty to use `typst`.
     /// e.g. `LUATALK__DO_TYPST_COMPILE__TYPST_COMMAND='/path/to/typst-cli-dir/bin/typst'`
     #[getset(get = "pub")]
     #[serde(default)]
