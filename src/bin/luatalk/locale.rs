@@ -183,25 +183,6 @@ None 表示与输入文件名的主文件名部分相同的目录。",
     }
 }
 
-// /// Momotalk export JSON format for 'https://github.com/U1805/momotalk'
-// Momotalk {
-//     /// Ouptut. Defaults to None.
-//     ///
-//     /// For one file: a file path, or '-' for stdout.
-//     /// None stands for stdout.
-//     ///
-//     /// For multiple files: a directory path,
-//     /// or a format string with placeholders `p` for page number starts from 1.
-//     /// e.g. 'article_{p}.json'.
-//     /// None stands for directory named after stem portion of input file name.
-//     #[arg(short, long)]
-//     output: Option<FileOrStdout>,
-//
-//     /// Set output plurality manually
-//     #[arg(long, default_value = "auto")]
-//     pl: OutputPluralityArg,
-// },
-
 trait TypstOutputOptionsArgsExt {
     fn typst_output_options_localize_zh_hans(self) -> Self;
 }
