@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add translation for help messages of this CLI program.
 - Make `do generate` supports system locale.
 - Add `"svg"` as a output format for `do <INPUT> typst-compile`.
 
