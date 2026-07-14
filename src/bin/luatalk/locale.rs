@@ -55,6 +55,7 @@ impl AppCommandExt for Command {
             .long_about(
                 "
 使用 Lua 文件构建类MMT文章。
+
 支持 Lua 5.5。",
             )
             .after_help(
