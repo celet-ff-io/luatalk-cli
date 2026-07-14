@@ -19,6 +19,7 @@ use miette::{IntoDiagnostic, Result, WrapErr, diagnostic};
 use mlua::Lua;
 use regex::Regex;
 use semver::VersionReq;
+use strum::{Display, EnumString, IntoStaticStr};
 use tap::{Pipe, Tap};
 
 use luatalk::{Article, InLang, IntoAndLang, LuaExt, dto, momotalk};
@@ -120,26 +121,23 @@ impl From<OutputCommand> for OutputAction {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Display, IntoStaticStr, EnumString)]
 pub enum TypstCompileFormat {
+    #[strum(serialize = "pdf")]
     Pdf,
+    #[strum(serialize = "svg")]
+    Svg,
+    #[strum(serialize = "png")]
     Png,
 }
 
 impl From<TypstCompileFormatArg> for TypstCompileFormat {
     fn from(value: TypstCompileFormatArg) -> Self {
+        use TypstCompileFormatArg as Arg;
         match value {
-            TypstCompileFormatArg::Pdf => Self::Pdf,
-            TypstCompileFormatArg::Png => Self::Png,
-        }
-    }
-}
-
-impl From<TypstCompileFormat> for &str {
-    fn from(value: TypstCompileFormat) -> &'static str {
-        match value {
-            TypstCompileFormat::Pdf => "pdf",
-            TypstCompileFormat::Png => "png",
+            Arg::Pdf => Self::Pdf,
+            Arg::Svg => Self::Svg,
+            Arg::Png => Self::Png,
         }
     }
 }
@@ -369,21 +367,20 @@ impl App<state::OfArticle> {
                         "Cannot infer output format from a file extension not valid UTF-8",
                     )
                 })?;
-            match ext.to_lowercase().as_str() {
-                "pdf" => TypstCompileFormat::Pdf,
-                "png" => TypstCompileFormat::Png,
-                _ => {
-                    return Err(diagnostic!(
-                        help = HELP,
-                        "Cannot infer output format from file extension: {ext}"
-                    )
-                    .into());
-                }
-            }
+            ext.to_lowercase().as_str().try_into().map_err(|_| {
+                diagnostic!(
+                    help = HELP,
+                    "Cannot infer output format from file extension: {ext}"
+                )
+            })?
         };
-        let output = if let Some(ext) = match format {
-            TypstCompileFormat::Pdf => format.pipe(Into::<&str>::into).into(),
-            TypstCompileFormat::Png => None,
+        let output = if let Some(ext) = {
+            use TypstCompileFormat::*;
+            match format {
+                Pdf => format.pipe(<&str>::from).into(),
+                Svg => None,
+                Png => None,
+            }
         } {
             if let Some(output) = output {
                 output.to_owned()
@@ -494,10 +491,7 @@ or specify the command with `LUATALK__DO_TYPST_COMPILE__TYPST_COMMAND` environme
         let output = process::Command::new(typst_command)
             .arg("compile")
             .arg("--format")
-            .arg(match format {
-                TypstCompileFormat::Pdf => "pdf",
-                TypstCompileFormat::Png => "png",
-            })
+            .arg(format.pipe(<&str>::from))
             .arg(tmp_typ_path)
             .arg(&output)
             .output()

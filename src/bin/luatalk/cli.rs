@@ -103,8 +103,7 @@ pub mod generate {
             for bash users to load the completion script in current session.")]
         Completion { shell: Shell },
 
-        /// Useful assets file.
-        /// You may also obtain them from source.
+        /// Useful assets file. You may also obtain them from source.
         Asset { asset: AssetArg },
 
         /// Help about advanced configuration of this program
@@ -272,12 +271,14 @@ pub mod do_ {
         },
 
         /// Output both dumped JSON file and Typst file for rendering the article.
+        ///
         /// This action is like a combination of
-        /// `do json -o "<STEM>.json"`
-        /// and `generate typst [OPTIONS] <STEM>.json -o <STEM>.typ`.
+        /// `do json -o '<STEM>.json'`
+        /// and `generate typst [OPTIONS] '<STEM>.json' -o '<STEM>.typ'`.
         Typst {
             /// Ouptut path incompleted, ends with file stem. Defaults to None.
-            /// which stands for being same as stem portion of input file name.
+            ///
+            /// None stands for being same as stem portion of input file name.
             /// e.g. 'article' or 'dir/article'.
             #[arg(long)]
             stem: Option<String>,
@@ -291,6 +292,7 @@ pub mod do_ {
 
         /// An easy command to use typst-cli to compile article
         /// into a supported output format.
+        ///
         /// Note that typst-cli supports environment variables for some options,
         /// you may use them to configure some advanced typst-cli options.
         /// For more advanced typst-cli usage, or useful features like `typst watch`,
@@ -298,12 +300,12 @@ pub mod do_ {
         TypstCompile {
             /// Ouptut. Defaults to None.
             ///
-            /// For one file like PDF : a file path.
+            /// For one file like PDF: a file path.
             /// None stands for a file whose stem is same as input file stem.
             ///
             /// For multiple files like PNG pictures: a directory path,
             /// or a format string with placeholder `p` for page number starts from 1.
-            /// e.g. 'article_{p}.json'.
+            /// e.g. 'article_{p}.png'.
             /// None stands for directory named after stem portion of input file name.
             #[arg(short, long)]
             output: Option<String>,
@@ -319,8 +321,8 @@ pub mod do_ {
             #[command(flatten)]
             url_fetch_options: UrlFetchOptionsArgs,
 
-            /// **FOR DEBUG**.
-            /// Keep temporary files created in system temporary directory.
+            /// Keep temporary files created in system temporary directory,
+            /// which is useful for debugging.
             #[arg(long)]
             keep_temp: bool,
         },
@@ -339,7 +341,7 @@ pub mod do_ {
             #[arg(short, long)]
             output: Option<FileOrStdout>,
 
-            /// Output plurality.
+            /// Set output plurality manually
             #[arg(long, default_value = "auto")]
             pl: OutputPluralityArg,
         },
@@ -350,6 +352,9 @@ pub mod do_ {
     pub enum TypstCompileFormatArg {
         /// PDF.
         Pdf,
+
+        /// SVG.
+        Svg,
 
         /// Pictures in PNG format.
         Png,
