@@ -9,6 +9,21 @@ readme = "README.md"
 homepage = "https://github.com/celet-ff-io/luatalk-cli"
 repository = "https://github.com/celet-ff-io/luatalk-cli"
 license = "MIT OR Apache-2.0"
+include = [
+  "/assets",
+  "/src",
+  "/tests",
+  "/CHANGELOG.md",
+  "/about.hbs",
+  "/about.toml",
+  "/Cargo.lock",
+  "/Cargo.toml",
+  "/deny.toml",
+  "/LICENSE-APACHE",
+  "/LICENSE-MIT",
+  "/NOTICE",
+  "/README.md",
+]
 
 [dependencies]
 clap = { version = "4.6.1", features = ["derive"] }

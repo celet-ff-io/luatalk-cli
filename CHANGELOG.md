@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Make `do generate` supports system locale.
 
+### Changed
+
+- Use `include` in `Cargo.toml`.
+
 ### Fixed
 
 - `do <INPUT> typst-compile` should create parent directories
