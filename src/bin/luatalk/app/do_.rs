@@ -401,7 +401,8 @@ impl App<state::OfArticle> {
             } else {
                 debug!("Output dir: {path}");
                 let stem: &str = &stem;
-                format!("{path}/{stem}_{{0p}}.png")
+                let ext: &str = format.into();
+                format!("{path}/{stem}_{{0p}}.{ext}")
             }
         };
 

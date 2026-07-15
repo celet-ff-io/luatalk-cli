@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0-rc.4] - 2026-07-15
+
+- Fixed wrong auto extension name when using `do typst-compile --format`
+  and format is not `pdf` nor `png`.
+
 ## [0.3.0-rc.3] - 2026-07-15
 
 ### Fixed
