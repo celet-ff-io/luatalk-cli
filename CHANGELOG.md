@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Update dependencies.
+
 ## [0.3.0-rc.4] - 2026-07-15
 
 - Fixed wrong auto extension name when using `do typst-compile --format`
@@ -40,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Use `include` in `Cargo.toml`.
+
+### Removed
+
+- Do not include `docs` and some files in the crate package.
 
 ### Fixed
 
