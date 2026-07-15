@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0-rc.3] - 2026-07-15
+
+### Fixed
+
+- Do not print creating directories message
+  when it is creating an empty one (literally "").
+
 ## [0.3.0-rc.2] - 2026-07-14
 
 ### Fixed

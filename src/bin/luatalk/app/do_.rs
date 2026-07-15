@@ -700,7 +700,7 @@ or specify the command with `LUATALK__DO_TYPST_COMPILE__TYPST_COMMAND` environme
                 )
                 .into());
             }
-        } else {
+        } else if !path.as_os_str().is_empty() {
             eprintln!("Creating directory: {}", path.display());
             fs::create_dir_all(path).into_diagnostic()?;
         }
