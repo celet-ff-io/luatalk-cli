@@ -5,16 +5,15 @@ Build article from Lua file.
 |English|[简体中文](./docs/README-zh_cn.md)|
 |---|---|
 
-## TODO
-
-- Complete README and USAGE.
-- Make different localization for different languages for help,
-  if possible.
-
 ## Features
 
-- Article has **pages** make it easy to export to multiple files.
-- Build article from Lua file. Using Lua version 5.5.
+- Build article from Lua file. Lua version 5.5 is supported.
+- Articles here are mainly for being compile by [Typst](https://github.com/typst/typst),
+  which is great to render fancy document in pages.
+- Dump article JSON as intermediate file to be loaded by LuaTalk again,
+  usually to keep a page-concatenated version, if needed.
+- Dump article to JSON format for [MomoTalk Editor](https://github.com/U1805/momotalk/)
+  if you want.
 
 ## Usage
 

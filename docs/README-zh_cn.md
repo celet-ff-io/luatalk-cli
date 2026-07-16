@@ -5,12 +5,6 @@
 |[English](../README.md)|简体中文|
 |---|---|
 
-## TODO
-
-- Complete README and USAGE.
-- Make different localization for different languages for help,
-  if possible.
-
 ## 特性
 
 - 文章使用**页**的概念，以便导出为多个文件。
