@@ -1,0 +1,139 @@
+name: release
+
+# Only do the release on x.y.z tags.
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+# We need this to be able to create releases.
+permissions:
+  contents: write
+
+jobs:
+  # The create-release job runs purely to initialize the GitHub release itself,
+  # and names the release after the `x.y.z` tag that was pushed. It's separate
+  # from building the release so that we only create the release once.
+  create-release:
+    name: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Get the release version from the tag
+        if: env.VERSION == ''
+        shell: bash
+        run: |
+          tag="${{ github.ref_name }}"
+          echo "TAG=$tag" >> $GITHUB_ENV
+          version="${tag#v}"
+          echo "VERSION=$version" >> $GITHUB_ENV
+          echo "Version $VERSION"
+
+      - name: Check that tag version and Cargo.toml version are the same
+        shell: bash
+        run: |
+          if ! grep -q "version = \"$VERSION\"" Cargo.toml; then
+            echo "version does not match Cargo.toml" >&2
+            exit 1
+          fi
+
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$TAG" --draft --verify-tag --title "$TAG"
+
+    outputs:
+      version: ${{ env.VERSION }}
+
+  build-release:
+    name: build-release
+    needs: ["create-release"]
+    runs-on: ${{ matrix.os }}
+    env:
+      RUST_BACKTRACE: 1
+      NAME: luatalk-cli
+      BIN_NAME: luatalk
+      PROFILE: release-lto
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            rust: stable
+            target: x86_64-unknown-linux-musl
+
+          - build: x86_64-pc-windows-msvc
+            os: windows-latest
+            rust: stable
+            target: x86_64-pc-windows-msvc
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
+
+      - name: Use Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Print info
+        run: cargo --version
+
+      - name: Build release binary
+        shell: bash
+        run: |
+          cargo build --verbose --profile ${{ env.PROFILE }} --target ${{ matrix.target }}
+          bin="target/${{ matrix.target }}/${{ env.PROFILE }}/${{ env.BIN_NAME }}"
+          echo "BIN=$bin" >> $GITHUB_ENV
+
+      - name: Determine archive name
+        shell: bash
+        run: |
+          version="${{ needs.create-release.outputs.version }}"
+          echo "ARCHIVE=${{ env.NAME }}-$version-${{ matrix.target }}" >> $GITHUB_ENV
+
+      - name: Create directory for archive
+        shell: bash
+        run: |
+          mkdir -p "$ARCHIVE"
+          cp "$BIN" "$ARCHIVE"/
+          cp {LICENSE-APACHE,LICENSE-MIT,NOTICE,README.md} "$ARCHIVE"/
+          cp -r docs "$ARCHIVE"/
+          mkdir -p "$ARCHIVE"/completions
+          "$BIN" generate completion bash > "$ARCHIVE/completions/${{ env.BIN_NAME }}.bash"
+          "$BIN" generate completion fish > "$ARCHIVE/completions/${{ env.BIN_NAME }}.fish"
+          "$BIN" generate completion powershell > "$ARCHIVE/completions/_${{ env.BIN_NAME }}.ps1"
+          "$BIN" generate completion zsh > "$ARCHIVE/completions/_${{ env.BIN_NAME }}"
+
+      - name: Build archive (Windows)
+        shell: bash
+        if: startsWith(matrix.os, 'windows')
+        run: |
+          7z a "$ARCHIVE.zip" "$ARCHIVE"
+          certutil -hashfile "$ARCHIVE.zip" SHA256 > "$ARCHIVE.zip.sha256"
+          echo "ASSET=$ARCHIVE.zip" >> $GITHUB_ENV
+          echo "ASSET_SUM=$ARCHIVE.zip.sha256" >> $GITHUB_ENV
+
+      - name: Build archive (Unix)
+        shell: bash
+        if: ${{ !startsWith(matrix.os, 'windows') }}
+        run: |
+          tar -czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+          shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
+          echo "ASSET=$ARCHIVE.tar.gz" >> $GITHUB_ENV
+          echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" >> $GITHUB_ENV
+
+      - name: Upload release archive
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          tag="${{ github.ref_name }}"
+          echo "Uploading release archive ${{ env.ASSET }} and checksum ${{ env.ASSET_SUM }} to GitHub release $tag"
+          gh release upload "$tag" ${{ env.ASSET }} ${{ env.ASSET_SUM }}
