@@ -21,22 +21,29 @@ See [USAGE](./docs/USAGE.md).
 
 ## Install
 
-- Download pre-built binary from Release if there is one suitable for your platform.
+Use one of the following methods:
+
+- Download pre-built binary from release
+  if there is one that suitable for your platform.
+
 - Use `cargo install luatalk-cli`
   to fetch source from [crates.io](https://crates.io/crates/luatalk-cli)
   , build and install it.
-- Download source and use `cargo run` to try it
-or use `cargo build --release` to build release yourself.
+
+- Download source and use `cargo install --path .` to build and install it.
 
 ## Project goals
 
 - Provide a simple CLI tool to build article from Lua file.
 - Output the processed article in different formats.
+- Outputting may work with other programs like Typst.
 
 ## Related projects
 
 - [MomoTalk Editor](https://github.com/U1805/momotalk/) -
   Blue Archive Momotalk Editor
+- [Typst](https://github.com/typst/typst) -
+  A markup-based typesetting system that is powerful and easy to learn
 
 ## License
 
