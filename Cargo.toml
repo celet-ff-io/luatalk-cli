@@ -77,6 +77,7 @@ name = "luatalk"
 
 [profile.release-lto]
 inherits = "release"
+strip = "symbols"
 lto = "fat"
 panic = "abort"
 codegen-units = 1

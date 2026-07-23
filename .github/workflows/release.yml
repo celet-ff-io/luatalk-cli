@@ -48,9 +48,10 @@ jobs:
 
   build-release:
     name: build-release
-    needs: ["create-release"]
+    needs: ["create-release", "test"]
     runs-on: ${{ matrix.os }}
     env:
+      CARGO_TERM_COLOR: always
       RUST_BACKTRACE: 1
       NAME: luatalk-cli
       BIN_NAME: luatalk
@@ -70,25 +71,34 @@ jobs:
             target: x86_64-pc-windows-msvc
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
-          target: ${{ matrix.target }}
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          add-job-id-key: "false"
+          add-rust-environment-hash-key: "false"
 
-      - name: Use Rust cache
-        uses: Swatinem/rust-cache@v2
+      - name: Install Linux cross
+        if: startsWith(matrix.os, 'ubuntu') && matrix.cargo == 'cross'
+        shell: bash
+        run: |
+          dir="$RUNNER_TEMP/cross-download"
+          mkdir "$dir"
+          echo "$dir" >> $GITHUB_PATH
+          cd "$dir"
+          wget ${{ env.CROSS_URL }} -O cross.tar.gz
+          tar -xf cross.tar.gz
 
       - name: Print info
-        run: cargo --version
+        run: ${{ matrix.cargo }} --version
 
       - name: Build release binary
         shell: bash
         run: |
-          cargo build --verbose --profile ${{ env.PROFILE }} --target ${{ matrix.target }}
+          ${{ matrix.cargo }} build --verbose --profile ${{ env.PROFILE }} --target ${{ matrix.target }}
           bin="target/${{ matrix.target }}/${{ env.PROFILE }}/${{ env.BIN_NAME }}"
           echo "BIN=$bin" >> $GITHUB_ENV
 
@@ -134,6 +144,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          tag="${{ github.ref_name }}"
-          echo "Uploading release archive ${{ env.ASSET }} and checksum ${{ env.ASSET_SUM }} to GitHub release $tag"
-          gh release upload "$tag" ${{ env.ASSET }} ${{ env.ASSET_SUM }}
+          gh release upload ${{ github.ref_name }} "$ASSET" "$ASSET_SUM"
