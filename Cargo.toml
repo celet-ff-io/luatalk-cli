@@ -70,6 +70,13 @@ xxhash-rust = { version = "0.8.17", features = ["xxh3"] }
 [[bin]]
 name = "luatalk"
 path = "src/bin/luatalk/main.rs"
+bench = false
 
 [lib]
 name = "luatalk"
+
+[profile.release-lto]
+inherits = "release"
+lto = "fat"
+panic = "abort"
+codegen-units = 1
