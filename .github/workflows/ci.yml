@@ -10,7 +10,6 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
       RUST_BACKTRACE: 1
-      CROSS_URL: https://github.com/cross-rs/cross/releases/download/v0.2.5/cross-x86_64-unknown-linux-musl.tar.gz
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -43,14 +42,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
           targets: ${{ matrix.target }}
+
       - uses: Swatinem/rust-cache@v2
         with:
           add-job-id-key: "false"
           add-rust-environment-hash-key: "false"
+          cache-directories: "~/.cargo"
 
       - name: Install cross
         if: matrix.cargo == 'cross'
@@ -59,23 +61,26 @@ jobs:
       - name: Print info
         run: ${{ matrix.cargo }} --version
 
-      - name: Build luatalk
+      - name: Build
         run: ${{ matrix.cargo }} build --verbose --target ${{ matrix.target }}
 
       - name: Run tests
-        run: ${{ matrix.cargo }} test
+        run: ${{ matrix.cargo }} test --verbose --target ${{ matrix.target }}
 
   fmt-and-clippy:
     name: Ensure code quality
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt,clippy
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          add-job-id-key: "false"
+          add-rust-environment-hash-key: "false"
 
       - run: cargo fmt --all --check
 
@@ -85,11 +90,12 @@ jobs:
     name: Check documentation
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          add-job-id-key: "false"
+          add-rust-environment-hash-key: "false"
 
       - name: Check documentation
         run: cargo doc --no-deps --document-private-items

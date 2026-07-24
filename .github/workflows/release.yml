@@ -16,7 +16,6 @@ jobs:
   # from building the release so that we only create the release once.
   create-release:
     name: create-release
-    needs: ["test"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
