@@ -16,6 +16,7 @@ jobs:
   # from building the release so that we only create the release once.
   create-release:
     name: create-release
+    needs: ["test"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -48,7 +49,7 @@ jobs:
 
   build-release:
     name: build-release
-    needs: ["create-release", "test"]
+    needs: ["create-release"]
     runs-on: ${{ matrix.os }}
     env:
       CARGO_TERM_COLOR: always
@@ -81,16 +82,9 @@ jobs:
           add-job-id-key: "false"
           add-rust-environment-hash-key: "false"
 
-      - name: Install Linux cross
-        if: startsWith(matrix.os, 'ubuntu') && matrix.cargo == 'cross'
-        shell: bash
-        run: |
-          dir="$RUNNER_TEMP/cross-download"
-          mkdir "$dir"
-          echo "$dir" >> $GITHUB_PATH
-          cd "$dir"
-          wget ${{ env.CROSS_URL }} -O cross.tar.gz
-          tar -xf cross.tar.gz
+      - name: Install cross
+        if: matrix.cargo == 'cross'
+        run: cargo install cross --git https://github.com/cross-rs/cross
 
       - name: Print info
         run: ${{ matrix.cargo }} --version
